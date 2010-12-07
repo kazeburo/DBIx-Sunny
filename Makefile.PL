@@ -8,6 +8,7 @@ requires 'Scope::Container', 0.04;
 requires 'Data::Util';
 requires 'List::Util';
 requires 'DBI', 1.615;
+requires 'DBD::SQLite', 1.31;
 requires 'Data::MessagePack';
 requires 'Class::Accessor::Lite', 0.05;
 
