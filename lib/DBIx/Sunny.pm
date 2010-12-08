@@ -18,7 +18,7 @@ sub new {
     my %args = @_;
     my $master = delete $args{master};
     my $slave = delete $args{slave};
-    my $on_connect = delete $args{on_connect} // sub {};
+    my $on_connect = delete $args{on_connect} || sub {};
     bless {
         master => $master,
         slave => $slave,
@@ -29,14 +29,14 @@ sub new {
 sub master_dbh {
     my $self = shift;
     croak 'This instance has no master database' unless $self->master;
-    $self->{_master_dbh} //= $self->_connect(@{$self->master});
+    $self->{_master_dbh} ||= $self->_connect(@{$self->master});
     $self->{_master_dbh};
 };
 
 sub slave_dbh {
     my $self = shift;
     return $self->master_dbh unless $self->slave;
-    $self->{_slave_dbh} //= $self->_connect(@{$self->slave});
+    $self->{_slave_dbh} ||= $self->_connect(@{$self->slave});
     $self->{_slave_dbh};
 };
 
@@ -72,24 +72,27 @@ sub _connect {
     return $cached_dbh if $cached_dbh;
 
     my ($dsn, $user, $pass, $attr) = @dsn;
+    $attr->{AutoInactiveDestroy} = 1;
     $attr->{PrintError} = 0;
     $attr->{RaiseError} = 0;
     $attr->{HandleError} = sub {
         Carp::croak(shift);
     };
 
+    my ($scheme, $driver, $attr_string, $attr_hash, $driver_dsn) = DBI->parse_dsn($dsn);
+    if ( $driver eq 'mysql' ) {
+        $attr->{mysql_connect_timeout} = 5;
+        $attr->{mysql_enable_utf8} = 1;
+        $attr->{mysql_auto_reconnect} = 0;
+    }
+    elsif ( $driver eq 'SQLite' ) {
+        $attr->{sqlite_unicode} = 1;
+    }
+    else {
+        Carp::croak( "not supported driver '$driver'" );
+    }
+
     my $dbh = DBI->connect($dsn, $user, $pass, $attr);
-    $dbh->STORE(AutoInactiveDestroy => 1);
-
-    my $driver_name = $dbh->{Driver}->{Name};
-    if ( $driver_name eq 'mysql' ) {
-        $dbh->{mysql_enable_utf8} = 1;
-        $dbh->do("SET NAMES utf8");
-    }
-    elsif ( $driver_name eq 'SQLite' ) {
-        $dbh->{sqlite_unicode} = 1;
-    }
-
     $self->on_connect->($dbh);
     my $dbi = {
         dbh => $dbh,
