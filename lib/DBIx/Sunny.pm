@@ -5,9 +5,8 @@ use warnings;
 use Carp;
 use Log::Minimal;
 use Scope::Container;
-use Data::Util qw/is_array_ref/;
 use List::Util qw/shuffle/;
-use Data::MessagePack;
+use Data::Dumper;
 use Class::Accessor::Lite;
 use DBI;
 
@@ -43,7 +42,7 @@ sub slave_dbh {
 
 sub _connect {
     my $self = shift;
-    if ( is_array_ref($_[0]) ) {
+    if ( @_ && (ref $_[0] || '' eq 'ARRAY') ) {
         my @dsn = @_;
         my $dbi;
         my $dsn_key = _build_dsn_key(@dsn);
@@ -104,7 +103,10 @@ sub _connect {
 
 sub _build_dsn_key {
     my @dsn = @_;
-    "dbix::sunny::".Data::MessagePack->pack(\@dsn);
+    local $Data::Dumper::Terse = 1;
+    local $Data::Dumper::Indent = 0;
+    my $key = Data::Dumper::Dumper(\@dsn);
+    "dbix::sunny::".$key;
 }
 
 sub _lookup_cache {
