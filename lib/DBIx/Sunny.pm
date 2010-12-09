@@ -2,6 +2,7 @@ package DBIx::Sunny;
 
 use strict;
 use warnings;
+use utf8;
 use Carp;
 use Log::Minimal;
 use Scope::Container;
@@ -146,7 +147,6 @@ sub set_comment {
         $i++;
     }
     $query =~ s! ! $trace !;
-    debugf $query;
     $query;
 }
 
