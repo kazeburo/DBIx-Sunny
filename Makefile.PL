@@ -8,6 +8,8 @@ requires 'Scope::Container', 0.04;
 requires 'List::Util';
 requires 'DBI', 1.615;
 requires 'DBD::SQLite', 1.31;
+requires 'DBD::mysql', 4.008;
+requires 'DBDx::Printf';
 requires 'Data::Dumper';
 requires 'Class::Accessor::Lite', 0.05;
 

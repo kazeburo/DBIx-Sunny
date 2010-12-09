@@ -8,3 +8,13 @@ __DATA__
 Masahiro Nagano
 kazeburo {at} gmail.com
 DBIx::Sunny
+DBI
+MySQL
+PrintError
+RaiseError
+SQL
+SQLite
+Subref
+dbh
+queryf
+
