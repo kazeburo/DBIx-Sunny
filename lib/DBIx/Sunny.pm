@@ -2,137 +2,80 @@ package DBIx::Sunny;
 
 use strict;
 use warnings;
-use utf8;
 use Carp;
-use Log::Minimal;
-use Scope::Container;
-use List::Util qw/shuffle/;
-use Data::Dumper;
+use parent qw/Class::Data::Inheritable/;
 use Class::Accessor::Lite;
-use DBI;
-use DBIx::Printf;
+use Data::Validator;
+use DBIx::TransactionManager;
+use DBI qw/:sql_types/;
 
 our $VERSION = '0.01';
-Class::Accessor::Lite->mk_ro_accessors(qw/master slave on_connect/);
+Class::Accessor::Lite->mk_ro_accessors(qw/dbh readonly/);
 
 sub new {
     my $class = shift;
     my %args = @_;
-    my $master = delete $args{master};
-    my $slave = delete $args{slave};
-    my $on_connect = delete $args{on_connect} || sub {};
     bless {
-        master => $master,
-        slave => $slave,
-        on_connect => $on_connect,
+        readonly => delete $args{readonly},
+        dbh => delete $args{dbh},
     }, $class;
 };
 
-sub master_dbh {
-    my $self = shift;
-    croak 'This instance has no master database' unless $self->master;
-    $self->{_master_dbh} ||= $self->_connect(@{$self->master});
-    $self->{_master_dbh};
-};
-
-sub slave_dbh {
-    my $self = shift;
-    return $self->master_dbh unless $self->slave;
-    $self->{_slave_dbh} ||= $self->_connect(@{$self->slave});
-    $self->{_slave_dbh};
-};
-
-sub _connect {
-    my $self = shift;
-    if ( @_ && (ref $_[0] || '' eq 'ARRAY') ) {
-        my @dsn = @_;
-        my $dbi;
-        my $dsn_key = _build_dsn_key(@dsn);
-        my $dbh = _lookup_container($dsn_key);
-        return $dbh if $dbh;
-
-        for my $s_dsn ( shuffle(@dsn) ) {
-            eval {
-                ($dbh, $dbi) = $self->_connect(@$s_dsn);
-            };
-            infof("Connection failed: " . $@) if $@;
-            last if ( $dbh );
-        }
-
-        if ( $dbh ) {
-            _save_container($dsn_key, $dbi);
-            return wantarray ? ( $dbh, $dbi) : $dbh;
-        }
-        
-        croak("couldn't connect all DB, " .
-            join(",", map { $_->[0] } @dsn));
-    }
-
-    my @dsn = @_;
-    my $dsn_key = _build_dsn_key(\@dsn);     
-    my $cached_dbh = _lookup_cache($dsn_key);
-    return $cached_dbh if $cached_dbh;
-
-    my ($dsn, $user, $pass, $attr) = @dsn;
-    $attr->{AutoInactiveDestroy} = 1;
-    $attr->{PrintError} = 0;
-    $attr->{RaiseError} = 0;
-    $attr->{HandleError} = sub {
-        Carp::croak(shift);
-    };
-
-    my ($scheme, $driver, $attr_string, $attr_hash, $driver_dsn) = DBI->parse_dsn($dsn);
-    if ( $driver eq 'mysql' ) {
-        $attr->{mysql_connect_timeout} = 5;
-        $attr->{mysql_enable_utf8} = 1;
-        $attr->{mysql_auto_reconnect} = 0;
-    }
-    elsif ( $driver eq 'SQLite' ) {
-        $attr->{sqlite_unicode} = 1;
-    }
-    else {
-        Carp::croak( "'$driver' is not supported" );
-    }
-
-    debugf("connect to '$dsn'");
-    my $dbh = DBI->connect($dsn, $user, $pass, $attr);
-    $self->on_connect->($dbh);
-    my $dbi = {
-        dbh => $dbh,
-        pid => $$,
-    };
-
-    _save_cache($dsn_key, $dbi);
-    return wantarray ? ( $dbh, $dbi ) : $dbh;
-    
-};
-
-sub _build_dsn_key {
-    my @dsn = @_;
-    local $Data::Dumper::Terse = 1;
-    local $Data::Dumper::Indent = 0;
-    my $key = Data::Dumper::Dumper(\@dsn);
-    "dbix::sunny::".$key;
+sub build_one {
+    my $class = shift;
+    my @args = @_;
+    $class->__setup_accessors(
+        sub {
+            my $sth = shift;
+            my $row = $sth->fetchrow_arrayref;
+            return unless $row;
+            return $row->[0];
+        },
+        @args;        
+    );
 }
 
-sub _lookup_cache {
-    my $key = shift;
-    return unless in_scope_container();
-    my $dbi = scope_container($key);
-    return if !$dbi;
-    my $dbh = $dbi->{dbh};
-    if ( $dbi->{pid} != $$ ) {
-        $dbh->STORE(InactiveDestroy => 1);
-        return;
-    }
-    return $dbh if $dbh->FETCH('Active') && $dbh->ping;
-    return;
+sub build_row {
+    my $class = shift;
+    my @args = @_;
+    $class->__setup_accessors(
+        sub {
+            my $sth = shift;
+            my $row = $sth->fetchrow_hashref;
+            return unless $row;
+            return $row;
+        },
+        @args;
+    );
 }
 
-sub _save_cache {
-    my $key = shift;
-    return unless in_scope_container();
-    scope_container($key, shift);
+sub build_all {
+    my $class = shift;
+    my @args = @_;
+    $class->__setup_accessors(
+        sub {
+            my $sth = shift;
+            my @rows;
+            while( my $row = $sth->fetchrow_hashref ) {
+                push @rows, $row;
+            }
+            return \@rows;
+        },
+        @args;
+    );
+}
+
+sub build_query {
+    my $class = shift;
+    my @args = @_;
+    $class->__setup_accessors(
+        sub {
+            my $sth = shift;
+            my $ret = shift;
+            return $ret;
+        },
+        @args;
+    );
 }
 
 sub set_comment {
@@ -150,40 +93,73 @@ sub set_comment {
     $query;
 }
 
+sub __setup_accessors {
+    my $class = shift;
+    my $cb = shift;
+    my $method = shift;
+    my $query = pop;
+    my @rules = @_;
+    
+    my $validators = $class->__validators;
+    if ( !$validators ) {
+        $validators = $class->__validators({});
+    }        
+    $validators->{$method} = Data::Validator->new(@rules);
+    
+    my @bind_keys;
+    while(my($name, $rule) = splice @rules, 0, 2) {
+        push @bind_keys, $name;
+    }
+    my $bind_keys = $class->__bind_keys;
+    if ( !$bind_keys ) {
+        $bind_keys = $class->__bind_keys({});
+    }
+    $bind_keys->{$method} = \@bind_keys;
+
+    my $builder = sub {
+        my $self = shift;
+        my $validator = $self->__validators->{$method};
+        my $args = $validator->validate(@_);
+        my $commented_query = $self->set_comment($query);
+        my $sth = $self->dbh->prepare($commented_query);
+        my $i = 1;
+        for my $key ( @{$self->__bind_keys->{$method}} ) {
+            my $type = $validator->find_rule($key);
+            my $bind_type = $type->is_a_type_of('Int') ? SQL_INTEGER :
+                $type->is_a_type_of('Num') ? SQL_FLOAT : undef;
+            if ( defined $bind_type ) {
+                $sth->bind_param(
+                    $i,
+                    $args->{$key},
+                    $bind_type
+                );
+            }
+            else {
+                $sth->bind_param(
+                    $i,
+                    $args->{$key},
+                );
+            }
+        }
+        my $ret = $sth->execute();
+        $cb->($sth,$ret);
+    };
+
+    {
+        no strict 'refs';
+        *{"$class\::$method"} = $builder;
+    }
+}
+
+
 sub select_one {
     my $self = shift;
     my $query = shift;
     $query = $self->set_comment($query);
     my @bind = @_;
-    my $ret = $self->slave_dbh->selectrow_arrayref($query, undef, @bind);
+    my $ret = $self->dbh->selectrow_arrayref($query, undef, @bind);
     return unless $ret;
     return $ret->[0];
-}
-
-sub selectf_one {
-    my $self = shift;
-    my $format = shift;
-    $self->select_one(
-        $self->slave_dbh->printf($format, @_)
-    );
-}
-
-sub select_one_from_master {
-    my $self = shift;
-    my $query = shift;
-    $query = $self->set_comment($query);
-    my @bind = @_;
-    my $ret = $self->master_dbh->selectrow_arrayref($query, undef, @bind);
-    return unless $ret;
-    return $ret->[0];
-}
-
-sub selectf_one_from_master {
-    my $self = shift;
-    my $format = shift;
-    $self->select_one_from_master(
-        $self->master_dbh->printf($format, @_)
-    );
 }
 
 sub select_row {
@@ -191,109 +167,66 @@ sub select_row {
     my $query = shift;
     $query = $self->set_comment($query);
     my @bind = @_;
-    $self->slave_dbh->selectrow_hashref($query, undef, @bind);
+    $self->dbh->selectrow_hashref($query, undef, @bind);
 }
 
-sub selectf_row {
-    my $self = shift;
-    my $format = shift;
-    $self->select_row(
-        $self->slave_dbh->printf($format, @_)
-    );
-}
-
-sub select_row_from_master {
-    my $self = shift;
-    my $query = shift;
-    $query = $self->set_comment($query);
-    my @bind = @_;
-    $self->master_dbh->selectrow_hashref($query, undef, @bind);
-}
-
-sub selectf_row_from_master {
-    my $self = shift;
-    my $format = shift;
-    $self->select_row_from_master(
-        $self->master_dbh->printf($format, @_)
-    );
-}
 
 sub select_all {
     my $self = shift;
     my $query = shift;
     $query = $self->set_comment($query);
     my @bind = @_;
-    $self->slave_dbh->selectall_arrayref($query, { Slice=>{} }, @bind);
-}
-
-sub selectf_all {
-    my $self = shift;
-    my $format = shift;
-    $self->select_all(
-        $self->slave_dbh->printf($format, @_)
-    );
-}
-
-sub select_all_from_master {
-    my $self = shift;
-    my $query = shift;
-    $query = $self->set_comment($query);
-    my @bind = @_;
-    $self->master_dbh->selectall_arrayref($query, { Slice=>{} }, @bind);
-}
-
-sub selectf_all_from_master {
-    my $self = shift;
-    my $format = shift;
-    $self->select_all_from_master(
-        $self->master_dbh->printf($format, @_)
-    );
+    $self->dbh->selectall_arrayref($query, { Slice=>{} }, @bind);
 }
 
 sub query {
     my $self = shift;
+    Carp::croak "couldnot use query for readonly database handler" if $self->readonly;
     my $query = shift;
     $query = $self->set_comment($query);
     my @bind = @_;
-    $self->master_dbh->do( $query, undef, @bind);
+    $self->dbh->do( $query, undef, @bind);
 }
 
-sub queryf {
+sub txn {
     my $self = shift;
-    my $format = shift;
-    $self->query(
-        $self->master_dbh->printf($format, @_)
-    );
+    $self->{__txn} ||= DBIx::TransactionManager->new($self->dbh);
+    $self->{__txn};
 }
 
-sub begin_work {
+sub begin {
     my $self = shift;
-   $self->master_dbh->begin_work;
+   $self->txn->txn_work;
 }
 
 sub rollback {
     my $self = shift;
-    $self->master_dbh->rollback;
+    $self->txn->txn_rollback;
 }
 
 sub commit {
     my $self = shift;
-    $self->master_dbh->commit;
+    $self->txn->txn_commit;
+}
+
+sub txn_scope {
+    my $self = shift;
+    $self->txn->txn_scope;
 }
 
 sub func {
     my $self = shift;
-    $self->master_dbh->func(@_);
+    $self->dbh->func(@_);
 }
 
 sub last_insert_id {
     my $self = shift;
-    my $driver_name = $self->master_dbh->{Driver}->{Name};
+    my $driver_name = $self->dbh->{Driver}->{Name};
     if ( $driver_name eq 'mysql' ) {
-        return $self->master_dbh->{mysql_insertid};
+        return $self->dbh->{mysql_insertid};
     }
     elsif ( $driver_name eq 'SQLite' ) {
-        return $self->master_dbh->sqlite_last_insert_rowid();
+        return $self->dbh->sqlite_last_insert_rowid();
     }
 }
 
@@ -309,121 +242,114 @@ DBIx::Sunny - Sunny DBI wrapper
 
 =head1 SYNOPSIS
 
-  use DBIx::Sunny;
-  use Scope::Container;
-
+  package MyProj::Data::DB;
+  
+  use parent qw/DBIx::Sunny/;
+  use Mouse::Util::TypeConstraints;
+  
+  subtype 'Uint'
+      => as 'Int'
+      => where { $_ >= 0 };
+  
+  subtype 'Natural'
+      => as 'Int'
+      => where { $_ = 0 };
+  
+  enum 'Flag' => qw/1 0/;
+  
+  __PACKAGE__->build_one(
+      'max_id',
+      'SELECT max(id) FROM member'
+  );
+  
+  __PACKAGE__->build_row(
+      'member',
+      'SELECT * FROM member WHERE id=?',
+      id => { isa => 'Natural' }
+  );
+  
+  __PACAKGE__->build_all(
+      'recent_article',
+      'SELECT * FROM articles WHERE public=? ORDER BY created_on LIMIT ?,?',
+      public => { isa => 'Flag', default => 1 },
+      offset => { isa => 'Uint', default => 0 },
+      limit  => { isa => 'Uint', default => 10 },
+  );
+  
+  __PACKAGE__->build_query(
+      'add_article',
+      'INSERT INTO articles (member_id, public, subject, body, created_on) 
+       VALUES ( ?, ?, ?, ?, ?)',
+      member_id => { isa => 'Natural' },
+      flag => { isa => 'Flag', default => '1' },
+      subject => { isa => 'Str' },
+      body => { isa => 'Str' },
+      created_on => { isa => .. }
+  );
+  
+  __PACKAGE__->build_one(
+      'article_count_by_member',
+      'SELECT COUNT(*) FROM articles WHERE member_id = ?',
+      member_id => { isa => 'Natural' },
+  );
+  
+  __PACKAGE__->build_query(
+      'update_member_article_count',
+      'UPDATE member SET article_count = ? WHERE id = ?',
+      article_count => { isa => 'Uint' },
+      id => { isa => 'Natural' }
+  );
+  
+  
+  ...
+  
+  
+  package main;
+  
+  use MyProj::Data::DB;
+  use DBI;
+  
+  my $dbh = DBI->connect(...);
+  my $db = MyProj::Data::DB->new(dbh=>$dbh,readonly=>0);
+  
+  my $max = $db->max_id;
+  my $member_hashref = $db->member(id=>100); 
+  # my $member = $db->member(id=>'abc');  #validator error
+  
+  my $article_arrayref = $db->recent_article( offset => 10 );
+  
   {
-      my $sc = start_scope_container();
-      my $sunny = DBIx::Sunny->new({
-          master => ["dbi:mysql:mydb;host=dbm1","user","password"],
-          slave  => [
-              ["dbi:mysql:mydb;host=dbs1","user","password"],
-              ["dbi:mysql:mydb;host=dbs2","user","password"],
-              ["dbi:mysql:mydb;host=dbs3","user","password"],
-          ],
-      });
-
-      my $result = $sunny->query("INSERT INTO member (user_id,name) VALUES (?,?)",
-                                 "kazeburo", "Masahiro Nagano");
-
-      my $id = $sunny->last_insert_id;
-
-      my $count = $sunny->select_one("SELECT count(*) FROM member");
-
-      my $row = $sunny->select_row("SELECT * FROM member WHERE id = ?", $id);
-
-      my $rows = $sunny->select_all("SELECT * FROM member ORDER BY id desc LIMIT 10");
+      my $txn = $db->txn_scope;
+      $db->add_article(
+          member_id => $id,
+          subject => $subject,
+          body => $body,
+          created_on => 
+      );
+      my $last_insert_id = $db->last_insert_id;
+      my $count = $db->article_count_by_member( id => $id );
+      $db->update_member_article_count(
+          article_count => $count,
+          id => $id
+      );
+      $txn->commit;
   }
-
+  
 =head1 DESCRIPTION
-
-DBIx::Sunny は O/R MapperではなくシンプルなDBIのラッパーです。Scope::Containerによる接続の管理
-レプリケーションなどによるmaster/slave構成をサポート、UTF8テキスト文字列の自動変換などを行います。
-MySQLとSQLiteのみをサポートしています。
 
 =head1 METHODS
 
-=head2 new({ master => Arrayref, slave => Arrayref, on_connect => Subref )
-
-DBIx::Sunnyのインスタンスを作ります。master、slave、on_connectのオプションを受け取ります。
-
-=head3 master: Arrayref
-
-master データベースの接続に必要な情報です。Arrayrefでdsn,username,passwordを渡します。
-
-  master => ["dbi:mysql:database=mydb","user","password"]
-
-データベースに接続する際には、DBIx::Sunnyモジュールにてエラーハンドリングのオプションを付加します。
-PrintErrorと RaiseErrorは無効にされ、 HandleErrorに例外を返すコールバックが指定されます。 
-また、MySQLの場合、 mysql_connect_timeout を5秒に、 mysql_auto_reconnectを無効にし、 
-mysql_enable_utf8を有効にします。
-SQLiteの場合は、 sqlite_unicodeを有効にします。
-
-=head3 slave: Arrayref
-
-slave データベースの情報を渡します。複数のslaveサーバがある場合は、Arrayrefにて指定します。複数個のdsnが
-渡された場合、ランダムに選び出し接続可能なdsnを利用します。
-
-  slave => [
-      ["dbi:mysql:mydb;host=dbs1","user","password"],
-      ["dbi:mysql:mydb;host=dbs2","user","password"],
-      ["dbi:mysql:mydb;host=dbs3","user","password"],
-  ],
-
-=head3 on_connect: Subref
-
-データベースに接続した際に呼ばれます。
-
-  on_connect => sub {
-      my $dbh = shift;
-      ...
-  },
-
-第一引数に接続が完了したdbhが渡されます
-
-=head2 master_dbh
-
-接続済みのmasterデータベースのdbh
-
-=head2 slave_dbh
-
-接続済みのslaveデータベースのdbh。slaveが指定されていない場合は、masterが返る
+=head2 new({ dbh => DBI, readonly => ENUM(0,1) )
 
 =head2 select_one($query, @binds);
-
+ 
 SQLを実行し、1行目の1つめのカラムを取得。クエリは slave データベースに発行される
-
-=head2 selectf_one($format, @values);
-
-DBIx::Printfにてクエリを生成し、select_oneを実行
-
-=head2 select_one_from_master
-
-select_oneと同じ。ただし master データベースに発行される
-
-=head2 selectf_one_from_master
-
-selectf_oneと同じ。ただし master データベースに発行される
 
 =head2 select_row
 
-=head2 selectf_row
-
-=head2 select_row_from_master
-
-=head2 selectf_row_from_master
-
 =head2 select_all
 
-=head2 selectf_all
-
-=head2 select_all_from_master
-
-=head2 selectf_all_from_master
-
 =head2 query
-
-=head2 queryf
 
 =head2 begin_work
 
