@@ -14,6 +14,7 @@ subtype 'Uint'
     => as 'Int'
     => where { $_ >= 0 };
 
+no Mouse::Util::TypeConstraints;
 
 __PACKAGE__->select_one(
     'version',
@@ -87,7 +88,10 @@ eval {
 };
 print $@;
 
-$row = $db->get_recent_data( limit => 10 );
+$row = $db->get_recent_data( limit => 20 );
+infof($row);
+
+$row = $db->get_recent_data( offset => 10 );
 infof($row);
 
 
