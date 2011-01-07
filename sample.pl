@@ -10,6 +10,11 @@ subtype 'Natural'
     => as 'Int'
     => where { $_ > 0 };
 
+subtype 'Uint'
+    => as 'Int'
+    => where { $_ >= 0 };
+
+
 __PACKAGE__->select_one(
     'version',
     'SELECT VERSION()'
@@ -36,6 +41,14 @@ __PACKAGE__->select_row(
     'SELECT * FROM fuga WHERE id = ?'
 );
 
+__PACKAGE__->select_all(
+    'get_recent_data',
+    offset => { isa => 'Uint', default => 0 },
+    limit => { isa => 'Uint', default => 10 },
+    'SELECT * FROM fuga ORDER BY id DESC LIMIT ?,?'
+);
+
+
 package main;
 
 use Log::Minimal;
@@ -47,7 +60,7 @@ local $Log::Minimal::PRINT = sub {
 };
 
 my $db = MyProj::Data->new(
-    dbh => DBI->connect('dbi:mysql:test')
+    dbh => DBI->connect('dbi:mysql(RaiseError=>1,PrintError=>0):test')
 );
 
 print "OK" if $db->init_table;
@@ -73,6 +86,10 @@ eval {
     $row = $db->get_data( id => 0 );
 };
 print $@;
+
+$row = $db->get_recent_data( limit => 10 );
+infof($row);
+
 
 #$db->query("insert into fuga (data) values (?)","\x{58f9}");
 #print $db->last_insert_id;

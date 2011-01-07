@@ -158,8 +158,9 @@ sub __setup_accessor {
                     $args->{$key},
                 );
             }
+            $i++;
         }
-        my $ret = $sth->execute();
+        my $ret = $sth->execute;
         return ($sth,$ret);
     };
 
@@ -234,6 +235,8 @@ DBIx::Sunny - SQL Class Builder
   
   enum 'Flag' => qw/1 0/;
   
+  no Mouse::Util::TypeConstraints;
+
   __PACKAGE__->select_one(
       'max_id',
       'SELECT max(id) FROM member'
