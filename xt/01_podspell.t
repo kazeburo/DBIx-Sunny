@@ -17,4 +17,7 @@ SQLite
 Subref
 dbh
 queryf
+readonly
+sql
+validators
 
