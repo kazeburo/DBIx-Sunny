@@ -44,6 +44,9 @@ sub connected {
         $dbh->{mysql_enable_utf8} = 1;
         $dbh->do("SET NAMES utf8");
     }
+    if ($dsn =~ /^dbi:mysql:/) {
+        $dbh->{mysql_auto_reconnect} = 0;
+    }
     $dbh->{private_connect_info} = [@_];
     $dbh->SUPER::connected(@_);
 }
