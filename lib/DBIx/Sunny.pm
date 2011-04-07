@@ -2,89 +2,50 @@ package DBIx::Sunny;
 
 use strict;
 use warnings;
-use Carp qw/confess/;
-use parent qw/Class::Data::Inheritable/;
-use Class::Accessor::Lite;
-use Data::Validator;
-use DBIx::TransactionManager;
-use DBI qw/:sql_types/;
+use 5.008001;
+use DBI 1.615;
 
 our $VERSION = '0.01';
-Class::Accessor::Lite->mk_ro_accessors(qw/dbh readonly/);
 
-__PACKAGE__->mk_classdata( '__validators' );
-__PACKAGE__->mk_classdata( '__bind_keys' );
+use parent qw/DBI/;
 
-sub new {
-    my $class = shift;
-    my %args = @_;
-    bless {
-        readonly => delete $args{readonly},
-        dbh => delete $args{dbh},
-    }, $class;
-};
+package DBIx::Sunny::dr;
+our @ISA = qw(DBI::dr);
 
-sub select_one {
-    my $class = shift;
-    my @args = @_;
-    $class->__setup_accessor(
-        sub {
-            my $cb = shift;
-            my ( $sth, $ret ) = $cb->(@_);
-            my $row = $sth->fetchrow_arrayref;
-            return unless $row;
-            return $row->[0];
-        },
-        @args
-    );
+package DBIx::Sunny::db;
+our @ISA = qw(DBI::db);
+
+use DBIx::TransactionManager;
+
+sub connected {
+    my $dbh = shift;
+    my ($dsn, $user, $pass, $attr) = @_;
+    $dbh->{RaiseError} = 1;
+    $dbh->{PrintError} = 0;
+    $dbh->{ShowErrorStatement} = 1;
+    $dbh->{AutoInactiveDestroy} = 1;
+    if ($dsn =~ /^dbi:SQLite:/) {
+        $dbh->{sqlite_unicode} = 1 unless exists $attr->{sqlite_unicode};
+    }
+    if ($dsn =~ /^dbi:mysql:/ && ! exists $attr->{mysql_enable_utf8} ) {
+        $dbh->{mysql_enable_utf8} = 1;
+        $dbh->do("SET NAMES utf8");
+    }
+    $dbh->{private_connect_info} = [@_];
+    $dbh->SUPER::connected(@_);
 }
 
-sub select_row {
-    my $class = shift;
-    my @args = @_;
-    $class->__setup_accessor(
-        sub {
-            my $cb = shift;
-            my ( $sth, $ret ) = $cb->(@_);
-            my $row = $sth->fetchrow_hashref;
-            return unless $row;
-            return $row;
-        },
-        @args
-    );
+sub connect_info { $_[0]->{private_connect_info} }
+
+sub _txn_manager {
+    my $self = shift;
+    if (!defined $self->{private_txn_manager}) {
+        $self->{private_txn_manager} = DBIx::TransactionManager->new($self);
+    }
+    return $self->{private_txn_manager};
 }
 
-sub select_all {
-    my $class = shift;
-    my @args = @_;
-    $class->__setup_accessor(
-        sub {
-            my $do_query = shift;
-            my ( $sth, $ret ) = $do_query->(@_);
-            my @rows;
-            while( my $row = $sth->fetchrow_hashref ) {
-                push @rows, $row;
-            }
-            return \@rows;
-        },
-        @args
-    );
-}
-
-sub query {
-    my $class = shift;
-    my @args = @_;
-    $class->__setup_accessor(
-        sub {
-            my $do_query = shift;
-            my $self = shift;
-            Carp::croak "couldnot use query for readonly database handler" if $self->readonly;
-            my ( $sth, $ret ) = $do_query->($self, @_);
-            return $ret;
-        },
-        @args
-    );
-}
+sub txn_scope { $_[0]->_txn_manager->txn_scope(caller => [caller(0)]) }
 
 sub __set_comment {
     my $self = shift;
@@ -94,251 +55,106 @@ sub __set_comment {
     my $i = 0;
     while ( my @caller = caller($i) ) {
         $trace = "/* $caller[1] line $caller[2] */"; 
-        last if $caller[0] ne ref($self) && $caller[0] ne __PACKAGE__;
+        last if $caller[0] ne ref($self) && $caller[0] !~ /^(:?DBI|DBD)::/;
         $i++;
     }
     $query =~ s! ! $trace !;
     $query;
 }
 
-sub __setup_accessor {
-    my $class = shift;
-    my $cb = shift;
-    my $method = shift;
-    my $query = pop;
-    my @rules = @_;
-    my $validators = $class->__validators;
-    if ( !$validators ) {
-        $validators = $class->__validators({});
-    }        
-    $validators->{$method} = Data::Validator->new(@rules)->with( 'NoThrow');
-    
-    my @bind_keys;
-    while(my($name, $rule) = splice @rules, 0, 2) {
-        push @bind_keys, $name;
-    }
-    my $bind_keys = $class->__bind_keys;
-    if ( !$bind_keys ) {
-        $bind_keys = $class->__bind_keys({});
-    }
-    $bind_keys->{$method} = \@bind_keys;
-
-
-    my $do_query = sub {
-        my $self = shift;
-        my $validator = $self->__validators->{$method};
-        my $args = $validator->validate(@_);
-        if ( $validator->has_errors ) {
-            my $errors = $validator->clear_errors;
-            my $message = "";
-            foreach my $e (@{$errors}) {
-                $message .= $e->{message} . "\n";
-            }
-            $message .= sprintf q!  ...   %s::%s(...) called!, ref $self, $method;
-            local $Carp::CarpLevel = $Carp::CarpLevel + 3;
-            confess $message;
-        }
-        my $commented_query = $self->__set_comment($query);
-        my $sth = $self->dbh->prepare($commented_query);
-        my $i = 1;
-        for my $key ( @{$self->__bind_keys->{$method}} ) {
-            my $type = $validator->find_rule($key);
-            my $bind_type = $type->{type}->is_a_type_of('Int') ? SQL_INTEGER :
-                $type->{type}->is_a_type_of('Num') ? SQL_FLOAT : undef;
-            if ( defined $bind_type ) {
-                $sth->bind_param(
-                    $i,
-                    $args->{$key},
-                    $bind_type
-                );
-            }
-            else {
-                $sth->bind_param(
-                    $i,
-                    $args->{$key},
-                );
-            }
-            $i++;
-        }
-        my $ret = $sth->execute;
-        return ($sth,$ret);
-    };
-
-    {
-        no strict 'refs';
-        *{"$class\::$method"} = sub {
-            $cb->( $do_query, @_ );
-        };
-    }
-}
-
-sub txn {
+sub prepare {
     my $self = shift;
-    $self->{__txn} ||= DBIx::TransactionManager->new($self->dbh);
-    $self->{__txn};
+    my $query = shift;
+    $self->SUPER::prepare($self->__set_comment($query), @_);
 }
 
-sub begin {
+sub do {
     my $self = shift;
-   $self->txn->txn_work;
+    my ($query, $attr, @bind) = @_;
+    $self->SUPER::do($self->__set_comment($query), $attr, @bind);
 }
 
-sub rollback {
-    my $self = shift;
-    $self->txn->txn_rollback;
+sub select_one {
+    my ($self, $query, @bind) = @_;
+    my $row = $self->selectrow_arrayref($query, {}, @bind);
+    return unless $row;
+    return $row->[0];
 }
 
-sub commit {
-    my $self = shift;
-    $self->txn->txn_commit;
+sub select_row {
+    my ($self, $query, @bind) = @_;
+    my $row = $self->selectrow_hashref($query, {}, @bind);
+    return unless $row;
+    return $row;
 }
 
-sub txn_scope {
-    my $self = shift;
-    $self->txn->txn_scope;
+sub select_all {
+    my ($self, $query, @bind) = @_;
+    my $rows = $self->selectall_arrayref($query, { Slice => {} }, @bind);
+    return $rows;
 }
 
-sub func {
-    my $self = shift;
-    $self->dbh->func(@_);
+sub query {
+    my ($self, $query, @bind) = @_;
+    my $sth = $self->prepare($query);
+    $sth->execute(@bind);
 }
 
-sub last_insert_id {
-    my $self = shift;
-    my $table = shift;
-    $self->dbh->last_insert_id("","",$table,"");
-}
+
+package DBIx::Sunny::st; # statement handler
+our @ISA = qw(DBI::st);
 
 1;
+
 __END__
 
-=encoding utf-8
+=encoding utf8
 
 =head1 NAME
 
-DBIx::Sunny - SQL Class Builder
+DBIx::Sunny - Simple but practical DBI wrapper
 
 =head1 SYNOPSIS
 
-  package MyProj::Data::DB;
-  
-  use parent qw/DBIx::Sunny/;
-  use Mouse::Util::TypeConstraints;
-  
-  subtype 'Uint'
-      => as 'Int'
-      => where { $_ >= 0 };
-  
-  subtype 'Natural'
-      => as 'Int'
-      => where { $_ > 0 };
-  
-  enum 'Flag' => qw/1 0/;
-  
-  no Mouse::Util::TypeConstraints;
+    use DBIx::Sunny;
 
-  __PACKAGE__->select_one(
-      'max_id',
-      'SELECT max(id) FROM member'
-  );
-  
-  __PACKAGE__->select_row(
-      'member',
-      id => { isa => 'Natural' }
-      'SELECT * FROM member WHERE id=?',
-  );
-  
-  __PACAKGE__->select_all(
-      'recent_article',
-      public => { isa => 'Flag', default => 1 },
-      offset => { isa => 'Uint', default => 0 },
-      limit  => { isa => 'Uint', default => 10 },
-      'SELECT * FROM articles WHERE public=? ORDER BY created_on LIMIT ?,?',
-  );
-  
-  __PACKAGE__->query(
-      'add_article',
-      member_id => 'Natural',
-      flag => { isa => 'Flag', default => '1' },
-      subject => 'Str',
-      body => 'Str',
-      created_on => { isa => .. },
-      <<SQL);
-  INSERT INTO articles (member_id, public, subject, body, created_on) 
-  VALUES ( ?, ?, ?, ?, ?)',
-  SQL
-  
-  __PACKAGE__->select_one(
-      'article_count_by_member',
-      member_id => 'Natural',
-      'SELECT COUNT(*) FROM articles WHERE member_id = ?',
-  );
-  
-  __PACKAGE__->query(
-      'update_member_article_count',
-      article_count => 'Uint',
-      id => 'Natural'
-      'UPDATE member SET article_count = ? WHERE id = ?',
-  );
-    
-  ...
-  
-  package main;
-  
-  use MyProj::Data::DB;
-  use DBI;
-  
-  my $dbh = DBI->connect(...);
-  my $db = MyProj::Data::DB->new(dbh=>$dbh,readonly=>0);
-  
-  my $max = $db->max_id;
-  my $member_hashref = $db->member(id=>100); 
-  # my $member = $db->member(id=>'abc');  #validator error
-  
-  my $article_arrayref = $db->recent_article( offset => 10 );
-  
-  {
-      my $txn = $db->txn_scope;
-      $db->add_article(
-          member_id => $id,
-          subject => $subject,
-          body => $body,
-          created_on => 
-      );
-      my $last_insert_id = $db->last_insert_id;
-      my $count = $db->article_count_by_member( id => $id );
-      $db->update_member_article_count(
-          article_count => $count,
-          id => $id
-      );
-      $txn->commit;
-  }
-  
+    my $dbh = DBIx::Sunny->connect(...);
+
+    # or 
+
+    use DBI;
+
+    my $dbh = DBI->connect(.., { RootClass => 'DBIx::Sunny' });
+
 =head1 DESCRIPTION
 
-=head1 BUILDER METHODS
+DBIx::Sunny is a simple but practical DBI wrapper. It provides better usability for you. This module based on Amon2::DBI.
 
-=head2 __PACKAGE__->select_one( method_name, validators, sql );
+=head1 FEATURES
 
-=head2 __PACKAGE__->select_row( method_name, validators, sql );
+=over 4
 
-=head2 __PACKAGE__->select_all( method_name, validators, sql );
+=item Set AutoInactiveDestroy to true.
 
-=head2 __PACKAGE__->query( method_name, validators, sql );
+DBIx::Sunny set AutoInactiveDestroy as true.
 
-=head1 METHODS
+=item Set sqlite_unicode and mysql_enable_utf8 automatically
 
-=head2 new({ dbh => DBI, readonly => ENUM(0,1) )
+DBIx::Sunny set sqlite_unicode and mysql_enable_utf8 automatically.
 
-=head2 begin
+=item Nested transaction management.
 
-=head2 commit
+DBIx::Sunny supports nested transaction management based on RAII like DBIx::Class or DBIx::Skinny. It uses L<DBIx::TransactionManager> internally.
 
-=head2 rollback
+=item Error Handling
 
-=head2 txn_scope
+DBIx::Sunny set RaiseError and ShowErrorStatement as true. DBIx::Sunny raises exception and shows current statement if your $dbh occurred exception.
 
-=head2 last_insert_id(table)
+=item SQL comment
+
+DBIx::Sunny adds file name and line number as SQL commnet that invokes SQL statement.
+
+=back
 
 =head1 AUTHOR
 
@@ -346,9 +162,11 @@ Masahiro Nagano E<lt>kazeburo {at} gmail.comE<gt>
 
 =head1 SEE ALSO
 
-C<DBI>, C<DBIx::TransactionManager>, C<Data::Validator>
+L<DBI>, L<Amon2::DBI>
 
 =head1 LICENSE
+
+Copyright (C) Masahiro Nagano
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
