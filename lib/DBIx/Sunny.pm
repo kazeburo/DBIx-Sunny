@@ -9,8 +9,21 @@ our $VERSION = '0.01';
 
 use parent qw/DBI/;
 
-package DBIx::Sunny::dr;
-our @ISA = qw(DBI::dr);
+sub connect {
+    my $class = shift;
+    my ($dsn, $user, $pass, $attr) = @_;
+    $attr->{RaiseError} = 1;
+    $attr->{PrintError} = 0;
+    $attr->{ShowErrorStatement} = 1;
+    $attr->{AutoInactiveDestroy} = 1;
+    if ($dsn =~ /^dbi:SQLite:/) {
+        $attr->{sqlite_unicode} = 1 unless exists $attr->{sqlite_unicode};
+    }
+    if ($dsn =~ /^dbi:mysql:/ && ! exists $attr->{mysql_enable_utf8} ) {
+        $attr->{mysql_enable_utf8} = 1;
+    }
+    $class->SUPER::connect($dsn, $user, $pass, $attr);
+}
 
 package DBIx::Sunny::db;
 our @ISA = qw(DBI::db);
@@ -131,7 +144,11 @@ DBIx::Sunny - Simple but practical DBI wrapper
 
     use DBI;
 
-    my $dbh = DBI->connect(.., { RootClass => 'DBIx::Sunny' });
+    my $dbh = DBI->connect(.., {
+        RootClass => 'DBIx::Sunny',
+        PrintError => 0,
+        RaiseError => 1,
+    });
 
 =head1 DESCRIPTION
 
