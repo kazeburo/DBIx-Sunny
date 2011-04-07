@@ -7,6 +7,7 @@ requires 'DBI', 1.615;
 requires 'Class::Accessor::Lite', 0.05;
 requires 'Class::Data::Inheritable';
 requires 'DBIx::TransactionManager';
+requires 'Data::Validator';
 
 tests 't/*.t';
 author_tests 'xt';

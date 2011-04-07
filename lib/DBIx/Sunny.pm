@@ -45,7 +45,12 @@ sub _txn_manager {
     return $self->{private_txn_manager};
 }
 
-sub txn_scope { $_[0]->_txn_manager->txn_scope(caller => [caller(0)]) }
+sub txn_scope {
+    my $self = shift;
+    $self->_txn_manager->txn_scope(
+        caller => [caller(0)]
+    );
+}
 
 sub __set_comment {
     my $self = shift;
@@ -54,7 +59,9 @@ sub __set_comment {
     my $trace;
     my $i = 0;
     while ( my @caller = caller($i) ) {
-        $trace = "/* $caller[1] line $caller[2] */"; 
+        my $file = $caller[1];
+        $file =~ s!\*/!*\//!g;
+        $trace = "/* $file line $caller[2] */"; 
         last if $caller[0] ne ref($self) && $caller[0] !~ /^(:?DBI|DBD)::/;
         $i++;
     }
@@ -153,6 +160,28 @@ DBIx::Sunny set RaiseError and ShowErrorStatement as true. DBIx::Sunny raises ex
 =item SQL comment
 
 DBIx::Sunny adds file name and line number as SQL commnet that invokes SQL statement.
+
+=back
+
+=head1 ADDITIONAL METHODS
+
+=over 4
+
+=item $col = $dbh->select_one($query, @bind);
+
+Shortcut for prepare, execute and fetchrow_arrayref->[0]
+
+=item $row = $dbh->select_row($query, @bind);
+
+Shortcut for prepare, execute and fetchrow_hashref
+
+=item $rows = $dbh->select_all($query, @bind);
+
+Shortcut for prepare, execute and selectall_arrayref(.., { Slice => {} }, ..)
+
+=item $dbh->query($query, @bind);
+
+Shortcut for prepare, execute. 
 
 =back
 

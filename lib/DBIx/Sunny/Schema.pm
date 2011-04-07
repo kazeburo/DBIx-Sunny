@@ -9,7 +9,6 @@ use Data::Validator;
 use DBIx::TransactionManager;
 use DBI qw/:sql_types/;
 
-
 Class::Accessor::Lite->mk_ro_accessors(qw/dbh readonly/);
 
 __PACKAGE__->mk_classdata( '__validators' );
@@ -86,21 +85,6 @@ sub query {
     );
 }
 
-sub __set_comment {
-    my $self = shift;
-    my $query = shift;
-
-    my $trace;
-    my $i = 0;
-    while ( my @caller = caller($i) ) {
-        $trace = "/* $caller[1] line $caller[2] */"; 
-        last if $caller[0] ne ref($self) && $caller[0] ne __PACKAGE__;
-        $i++;
-    }
-    $query =~ s! ! $trace !;
-    $query;
-}
-
 sub __setup_accessor {
     my $class = shift;
     my $cb = shift;
@@ -138,8 +122,7 @@ sub __setup_accessor {
             local $Carp::CarpLevel = $Carp::CarpLevel + 3;
             confess $message;
         }
-        my $commented_query = $self->__set_comment($query);
-        my $sth = $self->dbh->prepare($commented_query);
+        my $sth = $self->dbh->prepare($query);
         my $i = 1;
         for my $key ( @{$self->__bind_keys->{$method}} ) {
             my $type = $validator->find_rule($key);
@@ -172,30 +155,10 @@ sub __setup_accessor {
     }
 }
 
-sub txn {
-    my $self = shift;
-    $self->{__txn} ||= DBIx::TransactionManager->new($self->dbh);
-    $self->{__txn};
-}
-
-sub begin {
-    my $self = shift;
-   $self->txn->txn_work;
-}
-
-sub rollback {
-    my $self = shift;
-    $self->txn->txn_rollback;
-}
-
-sub commit {
-    my $self = shift;
-    $self->txn->txn_commit;
-}
-
 sub txn_scope {
     my $self = shift;
-    $self->txn->txn_scope;
+    $self->{__txn} ||= DBIx::TransactionManager->new($self->dbh);
+    $self->{__txn}->txn_scope( caller => [caller(0)] );
 }
 
 sub func {
@@ -208,6 +171,7 @@ sub last_insert_id {
     my $table = shift;
     $self->dbh->last_insert_id("","",$table,"");
 }
+
 
 1;
 __END__
@@ -286,9 +250,9 @@ DBIx::Sunny::Schema - SQL Class Builder
   package main;
   
   use MyProj::Data::DB;
-  use DBI;
+  use DBIx::Sunny;
   
-  my $dbh = DBI->connect(...);
+  my $dbh = DBIx::Sunny->connect(...);
   my $db = MyProj::Data::DB->new(dbh=>$dbh,readonly=>0);
   
   my $max = $db->max_id;
@@ -298,14 +262,14 @@ DBIx::Sunny::Schema - SQL Class Builder
   my $article_arrayref = $db->recent_article( offset => 10 );
   
   {
-      my $txn = $db->txn_scope;
+      my $txn = $db->dbh->txn_scope;
       $db->add_article(
           member_id => $id,
           subject => $subject,
           body => $body,
           created_on => 
       );
-      my $last_insert_id = $db->last_insert_id;
+      my $last_insert_id = $db->dbh->last_insert_id;
       my $count = $db->article_count_by_member( id => $id );
       $db->update_member_article_count(
           article_count => $count,
@@ -318,27 +282,31 @@ DBIx::Sunny::Schema - SQL Class Builder
 
 =head1 BUILDER METHODS
 
-=head2 __PACKAGE__->select_one( method_name, validators, sql );
+=over 4
 
-=head2 __PACKAGE__->select_row( method_name, validators, sql );
+=item __PACKAGE__->select_one( method_name, validators, sql );
 
-=head2 __PACKAGE__->select_all( method_name, validators, sql );
+=item __PACKAGE__->select_row( method_name, validators, sql );
 
-=head2 __PACKAGE__->query( method_name, validators, sql );
+=item __PACKAGE__->select_all( method_name, validators, sql );
+
+=item __PACKAGE__->query( method_name, validators, sql );
+
+=back
 
 =head1 METHODS
 
-=head2 new({ dbh => DBI, readonly => ENUM(0,1) )
+=over 4
 
-=head2 begin
+=item new({ dbh => DBI, readonly => ENUM(0,1) )
 
-=head2 commit
+=item txn_scope
 
-=head2 rollback
+=item func(method)
 
-=head2 txn_scope
+=item last_insert_id(table)
 
-=head2 last_insert_id(table)
+=back
 
 =head1 AUTHOR
 
