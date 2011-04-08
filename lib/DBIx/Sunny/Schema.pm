@@ -2,7 +2,7 @@ package DBIx::Sunny::Schema;
 
 use strict;
 use warnings;
-use Carp qw/confess/;
+use Carp qw/croak/;
 use parent qw/Class::Data::Inheritable/;
 use Class::Accessor::Lite;
 use Data::Validator;
@@ -25,6 +25,12 @@ sub new {
 
 sub select_one {
     my $class = shift;
+    if ( ref $class ) {
+        my ( $query, @bind) = @_;
+        my $row = $class->selectrow_arrayref($query, {}, @bind);
+        return unless $row;
+        return $row->[0];
+    }
     my @args = @_;
     $class->__setup_accessor(
         sub {
@@ -40,6 +46,12 @@ sub select_one {
 
 sub select_row {
     my $class = shift;
+    if ( ref $class ) {
+        my ( $query, @bind) = @_;
+        my $row = $class->selectrow_hashref($query, {}, @bind);
+        return unless $row;
+        return $row;
+    }
     my @args = @_;
     $class->__setup_accessor(
         sub {
@@ -55,6 +67,11 @@ sub select_row {
 
 sub select_all {
     my $class = shift;
+    if ( ref $class ) {
+        my ( $query, @bind) = @_;
+        my $rows = $class->selectall_arrayref($query, { Slice => {} }, @bind);
+        return $rows;
+    }
     my @args = @_;
     $class->__setup_accessor(
         sub {
@@ -72,6 +89,12 @@ sub select_all {
 
 sub query {
     my $class = shift;
+    if ( ref $class ) {
+        my ( $query, @bind) = @_;
+        Carp::croak "couldnot use query for readonly database handler" if $class->readonly;
+        my $sth = $class->prepare($query);
+        return $sth->execute(@bind);
+    }
     my @args = @_;
     $class->__setup_accessor(
         sub {
@@ -119,8 +142,7 @@ sub __setup_accessor {
                 $message .= $e->{message} . "\n";
             }
             $message .= sprintf q!  ...   %s::%s(...) called!, ref $self, $method;
-            local $Carp::CarpLevel = $Carp::CarpLevel + 3;
-            confess $message;
+            croak $message;
         }
         my $sth = $self->dbh->prepare($query);
         my $i = 1;
@@ -159,6 +181,16 @@ sub txn_scope {
     my $self = shift;
     $self->{__txn} ||= DBIx::TransactionManager->new($self->dbh);
     $self->{__txn}->txn_scope( caller => [caller(0)] );
+}
+
+sub prepare {
+    my $self = shift;
+    $self->dbh->prepare(@_);
+}
+
+sub do {
+    my $self = shift;
+    $self->dbh->do(@_);
 }
 
 sub func {
@@ -280,7 +312,7 @@ DBIx::Sunny::Schema - SQL Class Builder
   
 =head1 DESCRIPTION
 
-=head1 BUILDER METHODS
+=head1 BUILDER CLASS METHODS
 
 =over 4
 
@@ -302,7 +334,19 @@ DBIx::Sunny::Schema - SQL Class Builder
 
 =item txn_scope
 
-=item func(method)
+=item select_one($query, @bind)
+
+=item select_row($query, @bind)
+
+=item select_all($query, @bind)
+
+=item query($query, @bind)
+
+=item do
+
+=item prepare
+
+=item func
 
 =item last_insert_id(table)
 

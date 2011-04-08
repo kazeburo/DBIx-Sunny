@@ -123,7 +123,6 @@ sub query {
     $sth->execute(@bind);
 }
 
-
 package DBIx::Sunny::st; # statement handler
 our @ISA = qw(DBI::st);
 
