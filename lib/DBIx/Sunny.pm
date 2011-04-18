@@ -134,7 +134,7 @@ __END__
 
 =head1 NAME
 
-DBIx::Sunny - Simple but practical DBI wrapper
+DBIx::Sunny - Simple DBI wrapper
 
 =head1 SYNOPSIS
 
@@ -154,7 +154,7 @@ DBIx::Sunny - Simple but practical DBI wrapper
 
 =head1 DESCRIPTION
 
-DBIx::Sunny is a simple but practical DBI wrapper. It provides better usability for you. This module based on Amon2::DBI.
+DBIx::Sunny is a simple DBI wrapper. It provides better usability for you. This module based on Amon2::DBI.
 
 =head1 FEATURES
 
