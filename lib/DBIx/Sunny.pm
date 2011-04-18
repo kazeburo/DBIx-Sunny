@@ -178,7 +178,7 @@ DBIx::Sunny set RaiseError and ShowErrorStatement as true. DBIx::Sunny raises ex
 
 =item SQL comment
 
-DBIx::Sunny adds file name and line number as SQL commnet that invokes SQL statement.
+DBIx::Sunny adds file name and line number as SQL comment that invokes SQL statement.
 
 =back
 

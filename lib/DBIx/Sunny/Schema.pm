@@ -144,7 +144,7 @@ sub __setup_accessor {
             $message .= sprintf q!  ...   %s::%s(...) called!, ref $self, $method;
             croak $message;
         }
-        my $sth = $self->dbh->prepare($query);
+        my $sth = $self->dbh->prepare_cached($query);
         my $i = 1;
         for my $key ( @{$self->__bind_keys->{$method}} ) {
             my $type = $validator->find_rule($key);
@@ -200,8 +200,7 @@ sub func {
 
 sub last_insert_id {
     my $self = shift;
-    my $table = shift;
-    $self->dbh->last_insert_id("","",$table,"");
+    $self->dbh->last_insert_id(@_);
 }
 
 
@@ -318,11 +317,19 @@ DBIx::Sunny::Schema - SQL Class Builder
 
 =item __PACKAGE__->select_one( method_name, validators, sql );
 
+build a select_one method named $method_name with validator. validators arguments are passed for Data::Validator. you can use Mouse's type constraint. Type constraint are also used for SQL's bind type determination. 
+
 =item __PACKAGE__->select_row( method_name, validators, sql );
+
+build a select_row method named $method_name with validator.  
 
 =item __PACKAGE__->select_all( method_name, validators, sql );
 
+build a select_all method named $method_name with validator.  
+
 =item __PACKAGE__->query( method_name, validators, sql );
+
+build a query method named $method_name with validator.  
 
 =back
 
@@ -332,23 +339,44 @@ DBIx::Sunny::Schema - SQL Class Builder
 
 =item new({ dbh => DBI, readonly => ENUM(0,1) )
 
-=item txn_scope
+create instance of schema. if readonly is true, query method's will raise exception.
 
 =item select_one($query, @bind)
 
+Shortcut for prepare, execute and fetchrow_arrayref->[0]
+
 =item select_row($query, @bind)
+
+Shortcut for prepare, execute and fetchrow_hashref
 
 =item select_all($query, @bind)
 
+Shortcut for prepare, execute and selectall_arrayref(.., { Slice => {} }, ..)
+
 =item query($query, @bind)
+
+Shortcut for prepare, execute. 
+
+=item txn_scope
+
+return DBIx::TransactionManager::Guard object
 
 =item do
 
+Shortcut for $db->dbh->do()
+
 =item prepare
+
+
+Shortcut for $db->dbh->prepare()
 
 =item func
 
+Shortcut for $db->dbh->func()
+
 =item last_insert_id(table)
+
+Shortcut for $db->dbh->last_insert_id()
 
 =back
 
