@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use Test::More;
 use DBIx::Sunny;
-use Test::Requires 'DBD::SQLite';
+use Test::Requires { 'DBD::SQLite' => 1.27 };
 use t::TestSchema;
 
 my $dbh = DBIx::Sunny->connect('dbi:SQLite::memory:', '', '');

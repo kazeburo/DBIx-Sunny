@@ -14,6 +14,8 @@ author_tests 'xt';
 
 test_requires 'Test::More', 0.96;
 test_requires 'Test::Requires';
+test_requires 'DBD::SQLite', 1.27;
+
 auto_set_repository;
 #auto_include;
 WriteAll;

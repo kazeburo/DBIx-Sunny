@@ -1,4 +1,7 @@
 Revision history for Perl extension DBIx::Sunny
 
+0.02    Tue Apr 19 10:12:17 2011
+	- added DBD::SQLite >= 1.27 to test_requires
+
 0.01    Mon Dec  6 23:49:05 2010
         - original version

@@ -3,7 +3,7 @@ use warnings;
 use Test::More;
 use DBI;
 use Encode;
-use Test::Requires 'DBD::SQLite';
+use Test::Requires { 'DBD::SQLite' => 1.27 };
 
 eval {
     DBI->connect('dbi:unknown:', '', '', { RootClass => 'DBIx::Sunny' });
