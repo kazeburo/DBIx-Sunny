@@ -6,7 +6,10 @@ use parent 'DBIx::Sunny::Schema';
 
 __PACKAGE__->query(
     'create_foo_t',
-    q{CREATE TABLE foo (e varchar(10))}
+    q{CREATE TABLE foo (
+    id INTEGER NOT NULL PRIMARY KEY,
+    e VARCHAR(10)
+) }
 );
 
 __PACKAGE__->query(

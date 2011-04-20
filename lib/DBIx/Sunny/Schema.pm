@@ -91,7 +91,7 @@ sub query {
     my $class = shift;
     if ( ref $class ) {
         my ( $query, @bind) = @_;
-        Carp::croak "couldnot use query for readonly database handler" if $class->readonly;
+        croak "couldnot use query for readonly database handler" if $class->readonly;
         my $sth = $class->prepare($query);
         return $sth->execute(@bind);
     }
@@ -100,7 +100,7 @@ sub query {
         sub {
             my $do_query = shift;
             my $self = shift;
-            Carp::croak "couldnot use query for readonly database handler" if $self->readonly;
+            croak "couldnot use query for readonly database handler" if $self->readonly;
             my ( $sth, $ret ) = $do_query->($self, @_);
             return $ret;
         },
@@ -118,7 +118,7 @@ sub __setup_accessor {
     if ( !$validators ) {
         $validators = $class->__validators({});
     }        
-    $validators->{$method} = Data::Validator->new(@rules)->with( 'NoThrow');
+    $validators->{$method} = Data::Validator->new(@rules)->with('NoThrow');
     
     my @bind_keys;
     while(my($name, $rule) = splice @rules, 0, 2) {
@@ -141,7 +141,7 @@ sub __setup_accessor {
             foreach my $e (@{$errors}) {
                 $message .= $e->{message} . "\n";
             }
-            $message .= sprintf q!  ...   %s::%s(...) called!, ref $self, $method;
+            $message .= sprintf q! ...  %s->%s() called!, ref $self, $method;
             croak $message;
         }
         my $sth = $self->dbh->prepare_cached($query);

@@ -1,5 +1,9 @@
 Revision history for Perl extension DBIx::Sunny
 
+0.04    Wed Apr 19 23:44:03 2011
+	- added mysql test to author tests
+	- last_insert_id hack
+
 0.03    Tue Apr 19 15:55:32 2011
 	- require perl 5.8.5 for SQLite's unicode support
 

@@ -11,11 +11,16 @@ eval {
 ok $@, "dies with unknown driver, automatically.";
 
 my $dbh = DBIx::Sunny->connect('dbi:SQLite::memory:', '', '');
-$dbh->do(q{CREATE TABLE foo (e varchar(10))});
+$dbh->do(q{CREATE TABLE foo (
+    id INTEGER NOT NULL PRIMARY KEY,
+    e VARCHAR(10)
+)});
 ok( $dbh->query(q{INSERT INTO foo (e) VALUES(?)}, 3) );
+is( $dbh->last_insert_id, 1 );
 ok( $dbh->query(q{INSERT INTO foo (e) VALUES(?)}, 4) );
+is( $dbh->last_insert_id, 2 );
 is $dbh->select_one(q{SELECT COUNT(*) FROM foo}), 2;
-is_deeply $dbh->select_row(q{SELECT * FROM foo ORDER BY e}), { e => 3 };
+is_deeply $dbh->select_row(q{SELECT * FROM foo ORDER BY e}), { id => 1, e => 3 };
 is join('|', map { $_->{e} } @{$dbh->select_all(q{SELECT * FROM foo ORDER BY e})}), '3|4';
 
 subtest 'utf8' => sub {

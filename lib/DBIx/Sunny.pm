@@ -5,7 +5,7 @@ use warnings;
 use 5.008005;
 use DBI 1.615;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use parent qw/DBI/;
 
@@ -16,10 +16,10 @@ sub connect {
     $attr->{PrintError} = 0;
     $attr->{ShowErrorStatement} = 1;
     $attr->{AutoInactiveDestroy} = 1;
-    if ($dsn =~ /^dbi:SQLite:/) {
+    if ($dsn =~ /^(?i:dbi):SQLite:/) {
         $attr->{sqlite_unicode} = 1 unless exists $attr->{sqlite_unicode};
     }
-    if ($dsn =~ /^dbi:mysql:/ && ! exists $attr->{mysql_enable_utf8} ) {
+    if ($dsn =~ /^(?i:dbi):mysql:/ && ! exists $attr->{mysql_enable_utf8} ) {
         $attr->{mysql_enable_utf8} = 1;
     }
     $class->SUPER::connect($dsn, $user, $pass, $attr);
@@ -123,6 +123,18 @@ sub query {
     $sth->execute(@bind);
 }
 
+sub last_insert_id {
+    my $self = shift;
+    my $dsn = $self->connect_info->[0];
+    if ($dsn =~ /^(?i:dbi):SQLite:/) {
+        return $self->func('last_insert_rowid');
+    }
+    elsif ( $dsn =~ /^(?i:dbi):mysql:/) {
+        return $self->{mysql_insertid};
+    }
+    $self->SUPER::last_insert_id(@_);
+}
+
 package DBIx::Sunny::st; # statement handler
 our @ISA = qw(DBI::st);
 
@@ -155,6 +167,7 @@ DBIx::Sunny - Simple DBI wrapper
 =head1 DESCRIPTION
 
 DBIx::Sunny is a simple DBI wrapper. It provides better usability for you. This module based on Amon2::DBI.
+DBIx::Sunny supports only SQLite and MySQL.
 
 =head1 FEATURES
 
@@ -179,6 +192,10 @@ DBIx::Sunny set RaiseError and ShowErrorStatement as true. DBIx::Sunny raises ex
 =item SQL comment
 
 DBIx::Sunny adds file name and line number as SQL comment that invokes SQL statement.
+
+=item Easy access to last_insert_id
+
+DBIx::Sunny's last_insert_id needs no arguments. It's shortcut for mysql_insertid or last_insert_rowid.
 
 =back
 
