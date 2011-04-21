@@ -1,6 +1,7 @@
 use strict;
 use warnings;
 use Test::More;
+use Capture::Tiny qw/capture_merged/;
 use DBIx::Sunny;
 use Test::Requires { 'DBD::SQLite' => 1.27 };
 use t::TestSchema;
@@ -21,10 +22,16 @@ eval {
 ok($@);
 
 is $schema->count_foo(), 2;
+
+is $schema->select_one_foo(), 3;
+ok ! capture_merged { $schema->select_one_foo() };
+
 is_deeply $schema->select_row_foo(), { id=>1, e => 3 };
+ok ! capture_merged { $schema->select_row_foo() };
+
 is join('|', map { $_->{e} } @{$schema->select_all_foo()}), '3|4';
 is_deeply $schema->select_all_foo(limit=>1), [{ id=>1, e => 3 }];
-
+ok ! capture_merged { $schema->select_all_foo(limit=>1) };
 
 is_deeply $schema->retrieve_all_foo(limit=>1), [{ id=>1, e => 3 }];
 eval {

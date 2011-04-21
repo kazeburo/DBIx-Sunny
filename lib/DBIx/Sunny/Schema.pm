@@ -39,6 +39,7 @@ sub select_one {
             my $cb = shift;
             my ( $sth, $ret ) = $cb->(@_);
             my $row = $sth->fetchrow_arrayref;
+            $sth->finish;
             return unless $row;
             return $row->[0];
         },
@@ -60,6 +61,7 @@ sub select_row {
             my $cb = shift;
             my ( $sth, $ret ) = $cb->(@_);
             my $row = $sth->fetchrow_hashref;
+            $sth->finish;
             return unless $row;
             return $row;
         },
@@ -83,6 +85,7 @@ sub select_all {
             while( my $row = $sth->fetchrow_hashref ) {
                 push @rows, $row;
             }
+            $sth->finish;
             return \@rows;
         },
         @args
@@ -104,6 +107,7 @@ sub query {
             my $self = shift;
             croak "couldnot use query for readonly database handler" if $self->readonly;
             my ( $sth, $ret ) = $do_query->($self, @_);
+            $sth->finish;
             return $ret;
         },
         @args

@@ -28,6 +28,11 @@ __PACKAGE__->select_row(
     q{SELECT * FROM foo ORDER BY e}
 );
 
+__PACKAGE__->select_one(
+    'select_one_foo',
+    q{SELECT e FROM foo ORDER BY e}
+);
+
 __PACKAGE__->select_all(
     'select_all_foo',
     limit => { isa => 'Int', default => 2 },
