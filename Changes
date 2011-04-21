@@ -1,5 +1,9 @@
 Revision history for Perl extension DBIx::Sunny
 
+0.05    Thu Apr 21 18:05:06 2011
+        - added args method, Data::Validator shortcut
+        - uses Data::Validator's error message 
+
 0.04    Wed Apr 19 23:44:03 2011
 	- added mysql test to author tests
 	- last_insert_id hack

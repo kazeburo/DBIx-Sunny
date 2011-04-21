@@ -9,6 +9,8 @@ use Data::Validator;
 use DBIx::TransactionManager;
 use DBI qw/:sql_types/;
 
+$Carp::Internal{"DBIx::Sunny::Schema"} = 1;
+
 Class::Accessor::Lite->mk_ro_accessors(qw/dbh readonly/);
 
 __PACKAGE__->mk_classdata( '__validators' );
@@ -27,7 +29,7 @@ sub select_one {
     my $class = shift;
     if ( ref $class ) {
         my ( $query, @bind) = @_;
-        my $row = $class->selectrow_arrayref($query, {}, @bind);
+        my $row = $class->dbh->selectrow_arrayref($query, {}, @bind);
         return unless $row;
         return $row->[0];
     }
@@ -48,7 +50,7 @@ sub select_row {
     my $class = shift;
     if ( ref $class ) {
         my ( $query, @bind) = @_;
-        my $row = $class->selectrow_hashref($query, {}, @bind);
+        my $row = $class->dbh->selectrow_hashref($query, {}, @bind);
         return unless $row;
         return $row;
     }
@@ -69,7 +71,7 @@ sub select_all {
     my $class = shift;
     if ( ref $class ) {
         my ( $query, @bind) = @_;
-        my $rows = $class->selectall_arrayref($query, { Slice => {} }, @bind);
+        my $rows = $class->dbh->selectall_arrayref($query, { Slice => {} }, @bind);
         return $rows;
     }
     my @args = @_;
@@ -108,6 +110,32 @@ sub query {
     );
 }
 
+sub args {
+    my $self = shift;
+
+    my $class = ref $self ? ref $self : $self;
+    my $method = [caller(1)]->[3];
+    my @rules = @_;
+    my $validators = $class->__validators;
+    if ( !$validators ) {
+        $validators = $class->__validators({});
+    }
+    if ( ! exists $validators->{$method} ) {
+        $validators->{$method} = Data::Validator->new(@rules);
+    }
+
+    my @caller_args;
+    {
+        package DB;
+        () = caller(1);
+        shift @DB::args if $class eq ( ref($DB::args[0]) || $DB::args[0] );
+        @caller_args = @DB::args;
+    }
+    local $Carp::CarpLevel = 3;
+    local $Carp::Internal{'Data::Validator'} = 1;   
+    $validators->{$method}->validate(@caller_args);
+}
+
 sub __setup_accessor {
     my $class = shift;
     my $cb = shift;
@@ -117,8 +145,8 @@ sub __setup_accessor {
     my $validators = $class->__validators;
     if ( !$validators ) {
         $validators = $class->__validators({});
-    }        
-    $validators->{$method} = Data::Validator->new(@rules)->with('NoThrow');
+    }
+    $validators->{$method} = Data::Validator->new(@rules);
     
     my @bind_keys;
     while(my($name, $rule) = splice @rules, 0, 2) {
@@ -130,20 +158,11 @@ sub __setup_accessor {
     }
     $bind_keys->{$method} = \@bind_keys;
 
-
     my $do_query = sub {
         my $self = shift;
+        local $Carp::Internal{'Data::Validator'} = 1;
         my $validator = $self->__validators->{$method};
         my $args = $validator->validate(@_);
-        if ( $validator->has_errors ) {
-            my $errors = $validator->clear_errors;
-            my $message = "";
-            foreach my $e (@{$errors}) {
-                $message .= $e->{message} . "\n";
-            }
-            $message .= sprintf q! ...  %s->%s() called!, ref $self, $method;
-            croak $message;
-        }
         my $sth = $self->dbh->prepare_cached($query);
         my $i = 1;
         for my $key ( @{$self->__bind_keys->{$method}} ) {
@@ -377,6 +396,20 @@ Shortcut for $db->dbh->func()
 =item last_insert_id(table)
 
 Shortcut for $db->dbh->last_insert_id()
+
+=item args(@rule)
+
+Shortcut for using Data::Validator. Data::Validator instance will cache at first time.
+
+  sub retrieve_user {
+      my $self = shift;
+      my $args = $self->args(
+          id => 'Int'
+      );
+      $arg->{id} ...
+  }
+
+$args is validated arguments. @_ is not needed.
 
 =back
 

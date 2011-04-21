@@ -8,7 +8,7 @@ use Test::mysqld;
 my $mysqld = Test::mysqld->new(
     my_cnf => {
         'bind-address' => '127.0.0.1', # no TCP socket
-        'character_set_serve' => 'latin1', # for test
+        'character_set_server' => 'latin1', # for test
     }
 ) or plan skip_all => $Test::mysqld::errstr;
 

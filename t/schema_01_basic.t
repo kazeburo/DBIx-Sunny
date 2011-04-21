@@ -25,4 +25,16 @@ is_deeply $schema->select_row_foo(), { id=>1, e => 3 };
 is join('|', map { $_->{e} } @{$schema->select_all_foo()}), '3|4';
 is_deeply $schema->select_all_foo(limit=>1), [{ id=>1, e => 3 }];
 
+
+is_deeply $schema->retrieve_all_foo(limit=>1), [{ id=>1, e => 3 }];
+eval {
+    $schema->retrieve_all_foo( limit => 'bar');
+};
+ok($@);
+
+eval {
+    $schema->retrieve_all_foo('limit');
+};
+ok($@);
+
 done_testing();

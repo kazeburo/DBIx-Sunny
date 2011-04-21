@@ -34,6 +34,13 @@ __PACKAGE__->select_all(
     q{SELECT * FROM foo ORDER BY e LIMIT ?}
 );
 
+sub retrieve_all_foo {
+    my $self = shift;
+    my $args = $self->args(
+        limit => { isa => 'Int', default => 2 },
+    );
+    $self->select_all(q{SELECT * FROM foo ORDER BY e LIMIT ?}, $args->{limit});
+}
 
 1;
 
