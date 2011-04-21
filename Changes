@@ -1,5 +1,8 @@
 Revision history for Perl extension DBIx::Sunny
 
+0.06    Thu Apr 21 23:45:57 2011
+        - [Schema] added sth->finish for supressing prepare_cached alerts
+
 0.05    Thu Apr 21 18:05:06 2011
         - added args method, Data::Validator shortcut
         - uses Data::Validator's error message 

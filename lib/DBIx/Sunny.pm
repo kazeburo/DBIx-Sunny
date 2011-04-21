@@ -5,7 +5,7 @@ use warnings;
 use 5.008005;
 use DBI 1.615;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use parent qw/DBI/;
 
