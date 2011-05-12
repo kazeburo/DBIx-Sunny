@@ -1,5 +1,8 @@
 Revision history for Perl extension DBIx::Sunny
 
+0.07    Thu May 12 18:46:50 2011
+        - [Schema] added ArrayRef[`a] auto expansion
+
 0.06    Thu Apr 21 23:45:57 2011
         - [Schema] added sth->finish for supressing prepare_cached alerts
 

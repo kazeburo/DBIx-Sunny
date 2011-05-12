@@ -39,6 +39,13 @@ __PACKAGE__->select_all(
     q{SELECT * FROM foo ORDER BY e LIMIT ?}
 );
 
+__PACKAGE__->select_all(
+    'select_all_in',
+    ids => { isa => 'ArrayRef[Int]' },
+    limit => { isa => 'Int', default => 2},
+    q{SELECT * FROM foo WHERE id IN (?) ORDER BY e LIMIT ?}
+);
+
 sub retrieve_all_foo {
     my $self = shift;
     my $args = $self->args(

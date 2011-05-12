@@ -4,9 +4,13 @@ use Test::More;
 use DBIx::Sunny;
 use Encode;
 use Test::mysqld;
+use Test::TCP;
+
+my $port = empty_port();
 
 my $mysqld = Test::mysqld->new(
     my_cnf => {
+        'port' => $port,
         'bind-address' => '127.0.0.1', # no TCP socket
         'character_set_server' => 'latin1', # for test
     }

@@ -167,27 +167,52 @@ sub __setup_accessor {
         local $Carp::Internal{'Data::Validator'} = 1;
         my $validator = $self->__validators->{$method};
         my $args = $validator->validate(@_);
-        my $sth = $self->dbh->prepare_cached($query);
+        my $equery = $query;
+
         my $i = 1;
+        my @bind_params;
         for my $key ( @{$self->__bind_keys->{$method}} ) {
-            my $type = $validator->find_rule($key);
-            my $bind_type = $type->{type}->is_a_type_of('Int') ? SQL_INTEGER :
-                $type->{type}->is_a_type_of('Num') ? SQL_FLOAT : undef;
-            if ( defined $bind_type ) {
-                $sth->bind_param(
-                    $i,
-                    $args->{$key},
-                    $bind_type
-                );
+            my $type = $validator->find_rule($key)->{type};
+            if ( $type->is_a_type_of('ArrayRef') ) {
+                my $type_param_bind_type = $type->type_parameter->is_a_type_of('Int') ? SQL_INTEGER :
+                    $type->is_a_type_of('Num') ? SQL_FLOAT : undef;
+                my @val = @{$args->{$key}};
+                my $array_query = substr('?,' x scalar(@val), 0, -1);
+                my $search_i=0;
+                my $replace_query = sub {
+                    $search_i++;
+                    if ( $search_i == $i ) {
+                        return $array_query;
+                    }
+                    return '?';
+                };
+                $equery =~ s/\?/$replace_query->()/ge;
+
+                for my $val ( @val ) {
+                    if ( $type_param_bind_type ) {
+                        push @bind_params, [$i, $val, $type_param_bind_type];
+                    }
+                    else {
+                        push @bind_params, [$i, $val];
+                    }
+                    $i++;
+                }
             }
             else {
-                $sth->bind_param(
-                    $i,
-                    $args->{$key},
-                );
+                my $bind_type = $type->is_a_type_of('Int') ? SQL_INTEGER :
+                    $type->is_a_type_of('Num') ? SQL_FLOAT : undef;
+                if ( $bind_type ) {
+                    push @bind_params, [$i, $args->{$key}, $bind_type];
+                }
+                else {
+                    push @bind_params, [$i, $args->{$key}];
+                }
+                $i++;
             }
-            $i++;
         }
+
+        my $sth = $self->dbh->prepare_cached($equery);
+        $sth->bind_param(@{$_}) for @bind_params;
         my $ret = $sth->execute;
         return ($sth,$ret);
     };
@@ -273,6 +298,13 @@ DBIx::Sunny::Schema - SQL Class Builder
       limit  => { isa => 'Uint', default => 10 },
       'SELECT * FROM articles WHERE public=? ORDER BY created_on LIMIT ?,?',
   );
+
+  __PACAKGE__->select_all(
+      'recent_article',
+      id  => { isa => 'ArrayRef[Uint]' },
+      'SELECT * FROM articles WHERE id IN(?)',
+  );
+  # This method rewrites query like 'id IN (?,?..)' with Array's value number
   
   __PACKAGE__->query(
       'add_article',

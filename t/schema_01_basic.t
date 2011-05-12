@@ -33,6 +33,9 @@ is join('|', map { $_->{e} } @{$schema->select_all_foo()}), '3|4';
 is_deeply $schema->select_all_foo(limit=>1), [{ id=>1, e => 3 }];
 ok ! capture_merged { $schema->select_all_foo(limit=>1) };
 
+is join('|', map { $_->{e} } @{$schema->select_all_in(ids=>[1,2])}), '3|4';
+is_deeply $schema->select_all_in(ids=>[1,2,3], limit=>1), [{ id=>1, e => 3 }];
+
 is_deeply $schema->retrieve_all_foo(limit=>1), [{ id=>1, e => 3 }];
 eval {
     $schema->retrieve_all_foo( limit => 'bar');

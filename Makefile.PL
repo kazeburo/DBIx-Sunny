@@ -18,6 +18,7 @@ test_requires 'DBD::SQLite', 1.27;
 test_requires 'Capture::Tiny';
 
 test_requires 'Test::mysqld'     if $Module::Install::AUTHOR;
+test_requires 'Test::TCP'     if $Module::Install::AUTHOR;
 
 auto_set_repository;
 #auto_include;
