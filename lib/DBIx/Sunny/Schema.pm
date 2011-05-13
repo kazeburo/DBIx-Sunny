@@ -167,15 +167,14 @@ sub __setup_accessor {
         local $Carp::Internal{'Data::Validator'} = 1;
         my $validator = $self->__validators->{$method};
         my $args = $validator->validate(@_);
-        my $equery = $query;
+        my $modified_query = $query;
 
         my $i = 1;
         my @bind_params;
         for my $key ( @{$self->__bind_keys->{$method}} ) {
             my $type = $validator->find_rule($key)->{type};
             if ( $type->is_a_type_of('ArrayRef') ) {
-                my $type_param_bind_type = $type->type_parameter->is_a_type_of('Int') ? SQL_INTEGER :
-                    $type->is_a_type_of('Num') ? SQL_FLOAT : undef;
+                my $type_parameter_bind_type = $self->type2bind($type->type_parameter);
                 my @val = @{$args->{$key}};
                 my $array_query = substr('?,' x scalar(@val), 0, -1);
                 my $search_i=0;
@@ -186,32 +185,24 @@ sub __setup_accessor {
                     }
                     return '?';
                 };
-                $equery =~ s/\?/$replace_query->()/ge;
-
+                $modified_query =~ s/\?/$replace_query->()/ge;
                 for my $val ( @val ) {
-                    if ( $type_param_bind_type ) {
-                        push @bind_params, [$i, $val, $type_param_bind_type];
-                    }
-                    else {
-                        push @bind_params, [$i, $val];
-                    }
+                    push @bind_params, $type_parameter_bind_type
+                        ? [$i, $val, $type_parameter_bind_type]
+                        : [$i, $val];
                     $i++;
                 }
             }
             else {
-                my $bind_type = $type->is_a_type_of('Int') ? SQL_INTEGER :
-                    $type->is_a_type_of('Num') ? SQL_FLOAT : undef;
-                if ( $bind_type ) {
-                    push @bind_params, [$i, $args->{$key}, $bind_type];
-                }
-                else {
-                    push @bind_params, [$i, $args->{$key}];
-                }
+                my $bind_type = $self->type2bind($type);
+                push @bind_params, $bind_type
+                     ? [$i, $args->{$key}, $bind_type]
+                     : [$i, $args->{$key}];
                 $i++;
             }
         }
 
-        my $sth = $self->dbh->prepare_cached($equery);
+        my $sth = $self->dbh->prepare_cached($modified_query);
         $sth->bind_param(@{$_}) for @bind_params;
         my $ret = $sth->execute;
         return ($sth,$ret);
@@ -223,6 +214,13 @@ sub __setup_accessor {
             $cb->( $do_query, @_ );
         };
     }
+}
+
+sub type2bind {
+    my $self = shift;
+    my $type = shift;
+    return $type->is_a_type_of('Int') ? SQL_INTEGER :
+        $type->is_a_type_of('Num') ? SQL_FLOAT : undef;
 }
 
 sub txn_scope {

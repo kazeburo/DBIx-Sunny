@@ -1,5 +1,9 @@
 Revision history for Perl extension DBIx::Sunny
 
+0.08    Fri May 13 14:47:41 2011
+        - [Schema] bugfix, at handling ArrayRef[Num]
+        - [Schema] refactoring
+
 0.07    Thu May 12 18:46:50 2011
         - [Schema] added ArrayRef[`a] auto expansion
 

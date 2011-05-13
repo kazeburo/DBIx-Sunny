@@ -5,7 +5,7 @@ use warnings;
 use 5.008005;
 use DBI 1.615;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 use parent qw/DBI/;
 
@@ -119,7 +119,7 @@ sub select_all {
 
 sub query {
     my ($self, $query, @bind) = @_;
-    my $sth = $self->prepare($query);
+    my $sth = $self->prepare($query)
     $sth->execute(@bind);
 }
 
