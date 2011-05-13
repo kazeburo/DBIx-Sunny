@@ -119,7 +119,7 @@ sub select_all {
 
 sub query {
     my ($self, $query, @bind) = @_;
-    my $sth = $self->prepare($query)
+    my $sth = $self->prepare($query);
     $sth->execute(@bind);
 }
 
