@@ -55,6 +55,8 @@ sub select_row {
         return unless $row;
         return $row;
     }
+    my $filter;
+    $filter = pop @_ if ref $_[-1] && ref $_[-1] eq 'CODE';
     my @args = @_;
     $class->__setup_accessor(
         sub {
@@ -63,6 +65,9 @@ sub select_row {
             my $row = $sth->fetchrow_hashref;
             $sth->finish;
             return unless $row;
+            if ( $filter ) {
+                $filter->($row);
+            }
             return $row;
         },
         @args
@@ -76,6 +81,8 @@ sub select_all {
         my $rows = $class->dbh->selectall_arrayref($query, { Slice => {} }, @bind);
         return $rows;
     }
+    my $filter;
+    $filter = pop @_ if ref $_[-1] && ref $_[-1] eq 'CODE';
     my @args = @_;
     $class->__setup_accessor(
         sub {
@@ -83,6 +90,9 @@ sub select_all {
             my ( $sth, $ret ) = $do_query->(@_);
             my @rows;
             while( my $row = $sth->fetchrow_hashref ) {
+                if ( $filter ) {
+                    $filter->($row);
+                }
                 push @rows, $row;
             }
             $sth->finish;
@@ -295,6 +305,11 @@ DBIx::Sunny::Schema - SQL Class Builder
       offset => { isa => 'Uint', default => 0 },
       limit  => { isa => 'Uint', default => 10 },
       'SELECT * FROM articles WHERE public=? ORDER BY created_on LIMIT ?,?',
+      sub {
+          my $row = shift;
+          $row->{created_on} = DateTime::Format::MySQL->parse_datetime($row->{created_on});
+          $row->{created_on}->set_time_zone("Asia/Tokyo");
+      }
   );
 
   __PACAKGE__->select_all(
@@ -368,19 +383,19 @@ DBIx::Sunny::Schema - SQL Class Builder
 
 =over 4
 
-=item __PACKAGE__->select_one( method_name, validators, sql );
+=item __PACKAGE__->select_one( $method_name, @validators, $sql );
 
 build a select_one method named $method_name with validator. validators arguments are passed for Data::Validator. you can use Mouse's type constraint. Type constraint are also used for SQL's bind type determination. 
 
-=item __PACKAGE__->select_row( method_name, validators, sql );
+=item __PACKAGE__->select_row( $method_name, @validators, $sql, [\&filter] );
 
-build a select_row method named $method_name with validator.  
+build a select_row method named $method_name with validator. If a last argument is CodeRef, this coderef will be applied for a result row.
 
-=item __PACKAGE__->select_all( method_name, validators, sql );
+=item __PACKAGE__->select_all( $method_name, @validators, $sql, [\&filter] );
 
-build a select_all method named $method_name with validator.  
+build a select_all method named $method_name with validator. If a last argument is CodeRef, this coderef will be applied for all result row.
 
-=item __PACKAGE__->query( method_name, validators, sql );
+=item __PACKAGE__->query( $method_name, @validators, $sql );
 
 build a query method named $method_name with validator.  
 
@@ -390,48 +405,51 @@ build a query method named $method_name with validator.
 
 =over 4
 
-=item new({ dbh => DBI, readonly => ENUM(0,1) )
+=item new({ dbh => DBI, readonly => ENUM(0,1) ) :DBIx::Sunny::Schema
 
 create instance of schema. if readonly is true, query method's will raise exception.
 
-=item select_one($query, @bind)
+=item dbh :DBI
+
+readonly accessor for DBI database handler. 
+
+=item select_one($query, @bind) :Str
 
 Shortcut for prepare, execute and fetchrow_arrayref->[0]
 
-=item select_row($query, @bind)
+=item select_row($query, @bind) :HashRef
 
 Shortcut for prepare, execute and fetchrow_hashref
 
-=item select_all($query, @bind)
+=item select_all($query, @bind) :ArrayRef[HashRef]
 
 Shortcut for prepare, execute and selectall_arrayref(.., { Slice => {} }, ..)
 
-=item query($query, @bind)
+=item query($query, @bind) :Str
 
 Shortcut for prepare, execute. 
 
-=item txn_scope
+=item txn_scope() :DBIx::TransactionManager::Guard
 
 return DBIx::TransactionManager::Guard object
 
-=item do
+=item do(@args) :Str
 
-Shortcut for $db->dbh->do()
+Shortcut for $self->dbh->do()
 
-=item prepare
+=item prepare(@args) :DBI::st
 
+Shortcut for $self->dbh->prepare()
 
-Shortcut for $db->dbh->prepare()
+=item func(@args) :Str
 
-=item func
+Shortcut for $self->dbh->func()
 
-Shortcut for $db->dbh->func()
+=item last_insert_id(@args) :Str
 
-=item last_insert_id(table)
+Shortcut for $self->dbh->last_insert_id()
 
-Shortcut for $db->dbh->last_insert_id()
-
-=item args(@rule)
+=item args(@rule) :HashRef
 
 Shortcut for using Data::Validator. Data::Validator instance will cache at first time.
 

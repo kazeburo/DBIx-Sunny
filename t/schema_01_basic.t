@@ -29,9 +29,13 @@ ok ! capture_merged { $schema->select_one_foo() };
 is_deeply $schema->select_row_foo(), { id=>1, e => 3 };
 ok ! capture_merged { $schema->select_row_foo() };
 
+is_deeply $schema->select_row_foo_filter(), { id=>1, e => 9 };
+
 is join('|', map { $_->{e} } @{$schema->select_all_foo()}), '3|4';
 is_deeply $schema->select_all_foo(limit=>1), [{ id=>1, e => 3 }];
 ok ! capture_merged { $schema->select_all_foo(limit=>1) };
+
+is join('|', map { $_->{e} } @{$schema->select_all_foo_filter()}), '9|16';
 
 is join('|', map { $_->{e} } @{$schema->select_all_in(ids=>[1,2])}), '3|4';
 is_deeply $schema->select_all_in(ids=>[1,2,3], limit=>1), [{ id=>1, e => 3 }];

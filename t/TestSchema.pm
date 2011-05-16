@@ -28,6 +28,15 @@ __PACKAGE__->select_row(
     q{SELECT * FROM foo ORDER BY e}
 );
 
+__PACKAGE__->select_row(
+    'select_row_foo_filter',
+    q{SELECT * FROM foo ORDER BY e},
+    sub {
+        my $row = shift;
+        $row->{e} = $row->{e} * $row->{e};
+    }
+);
+
 __PACKAGE__->select_one(
     'select_one_foo',
     q{SELECT e FROM foo ORDER BY e}
@@ -38,6 +47,17 @@ __PACKAGE__->select_all(
     limit => { isa => 'Int', default => 2 },
     q{SELECT * FROM foo ORDER BY e LIMIT ?}
 );
+
+__PACKAGE__->select_all(
+    'select_all_foo_filter',
+    limit => { isa => 'Int', default => 2 },
+    q{SELECT * FROM foo ORDER BY e LIMIT ?},
+    sub {
+        my $row = shift;
+        $row->{e} = $row->{e} * $row->{e};
+    }
+);
+
 
 __PACKAGE__->select_all(
     'select_all_in',
