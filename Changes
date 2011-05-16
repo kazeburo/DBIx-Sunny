@@ -1,5 +1,8 @@
 Revision history for Perl extension DBIx::Sunny
 
+0.10    Mon May 16 10:21:10 2011
+        - [Schema] support defalting
+
 0.09    Mon May 16 10:21:10 2011
         - [Schema] added filter functions
 
