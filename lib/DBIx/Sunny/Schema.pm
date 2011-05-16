@@ -14,7 +14,6 @@ $Carp::Internal{"DBIx::Sunny::Schema"} = 1;
 Class::Accessor::Lite->mk_ro_accessors(qw/dbh readonly/);
 
 __PACKAGE__->mk_classdata( '__validators' );
-__PACKAGE__->mk_classdata( '__bind_keys' );
 
 sub new {
     my $class = shift;
@@ -155,33 +154,31 @@ sub __setup_accessor {
     my $cb = shift;
     my $method = shift;
     my $query = pop;
-    my @rules = @_;
-    my $validators = $class->__validators;
-    if ( !$validators ) {
-        $validators = $class->__validators({});
-    }
-    $validators->{$method} = Data::Validator->new(@rules);
-    
+
+    my @rules;
+    my %deflater;
     my @bind_keys;
-    while(my($name, $rule) = splice @rules, 0, 2) {
+    while ( my ($name,$rule) = splice @_, 0, 2 ) {
+        $rule = ref $rule ? $rule : { isa => $rule };
+        if ( my $deflater = delete $rule->{deflater} ) {
+            croak("deflater must be CodeRef in rule:$name")
+                if ( !ref($deflater) || ref($deflater) ne 'CODE');
+            $deflater{$name} = $deflater;
+        }
         push @bind_keys, $name;
-    }
-    my $bind_keys = $class->__bind_keys;
-    if ( !$bind_keys ) {
-        $bind_keys = $class->__bind_keys({});
-    }
-    $bind_keys->{$method} = \@bind_keys;
+        push @rules, $name, $rule;
+    } 
+    my $validator = Data::Validator->new(@rules);
 
     my $do_query = sub {
         my $self = shift;
         local $Carp::Internal{'Data::Validator'} = 1;
-        my $validator = $self->__validators->{$method};
         my $args = $validator->validate(@_);
         my $modified_query = $query;
 
         my $i = 1;
         my @bind_params;
-        for my $key ( @{$self->__bind_keys->{$method}} ) {
+        for my $key ( @bind_keys ) {
             my $type = $validator->find_rule($key)->{type};
             if ( $type->is_a_type_of('ArrayRef') ) {
                 my $type_parameter_bind_type = $self->type2bind($type->type_parameter);
@@ -197,6 +194,10 @@ sub __setup_accessor {
                 };
                 $modified_query =~ s/\?/$replace_query->()/ge;
                 for my $val ( @val ) {
+                    if ( $deflater{$key} ) {
+                        $val = $deflater{$key}->($val);
+                        $type_parameter_bind_type = undef;
+                    }
                     push @bind_params, $type_parameter_bind_type
                         ? [$i, $val, $type_parameter_bind_type]
                         : [$i, $val];
@@ -205,9 +206,14 @@ sub __setup_accessor {
             }
             else {
                 my $bind_type = $self->type2bind($type);
+                my $val = $args->{$key};
+                if ( $deflater{$key} ) {
+                    $val = $deflater{$key}->($val);
+                    $bind_type = undef;
+                }
                 push @bind_params, $bind_type
-                     ? [$i, $args->{$key}, $bind_type]
-                     : [$i, $args->{$key}];
+                     ? [$i, $val, $bind_type]
+                     : [$i, $val];
                 $i++;
             }
         }
@@ -305,11 +311,6 @@ DBIx::Sunny::Schema - SQL Class Builder
       offset => { isa => 'Uint', default => 0 },
       limit  => { isa => 'Uint', default => 10 },
       'SELECT * FROM articles WHERE public=? ORDER BY created_on LIMIT ?,?',
-      sub {
-          my $row = shift;
-          $row->{created_on} = DateTime::Format::MySQL->parse_datetime($row->{created_on});
-          $row->{created_on}->set_time_zone("Asia/Tokyo");
-      }
   );
 
   __PACAKGE__->select_all(
@@ -398,6 +399,41 @@ build a select_all method named $method_name with validator. If a last argument 
 =item __PACKAGE__->query( $method_name, @validators, $sql );
 
 build a query method named $method_name with validator.  
+
+=back
+
+=head1 FILTERING and DEFLATING
+
+=over 4
+
+=item FILTERING
+
+If you passed CodeRef to builder, this CodeRef will be applied for results.
+
+  __PACAKGE__->select_all(
+      'recent_article',
+      limit  => { isa => 'Uint', default => 10 },
+      'SELECT * FROM articles WHERE ORDER BY created_on LIMIT ?',
+      sub {
+          my $row = shift;
+          $row->{created_on} = DateTime::Format::MySQL->parse_datetime($row->{created_on});
+          $row->{created_on}->set_time_zone("Asia/Tokyo");
+      }
+  );
+
+=item DEFLATING
+
+If you want to deflate argument before execute SQL, you can it with adding deflater argument to validator rule.
+
+  __PACKAGE__->query(
+      'add_article',
+      subject => 'Str',
+      body => 'Str',
+      created_on => { isa => 'DateTime', deflater => sub { shift->strftime('%Y-%m-%d %H:%M:%S')  },
+      <<SQL);
+  INSERT INTO articles (subject, body, created_on) 
+  VALUES ( ?, ?, ?)',
+  SQL
 
 =back
 

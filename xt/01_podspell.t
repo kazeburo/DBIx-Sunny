@@ -26,3 +26,4 @@ RAII
 ShowErrorStatement
 SQL's
 validator
+deflater

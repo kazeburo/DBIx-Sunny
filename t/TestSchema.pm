@@ -37,6 +37,7 @@ __PACKAGE__->select_row(
     }
 );
 
+
 __PACKAGE__->select_one(
     'select_one_foo',
     q{SELECT e FROM foo ORDER BY e}
@@ -58,6 +59,11 @@ __PACKAGE__->select_all(
     }
 );
 
+__PACKAGE__->select_all(
+    'select_all_foo_deflater',
+    limit => { isa => 'Int', default => 2, deflater => sub { 1 } },
+    q{SELECT * FROM foo ORDER BY e LIMIT ?},
+);
 
 __PACKAGE__->select_all(
     'select_all_in',
@@ -65,6 +71,14 @@ __PACKAGE__->select_all(
     limit => { isa => 'Int', default => 2},
     q{SELECT * FROM foo WHERE id IN (?) ORDER BY e LIMIT ?}
 );
+
+__PACKAGE__->select_all(
+    'select_all_in_deflater',
+    ids => { isa => 'ArrayRef[Int]' },
+    limit => { isa => 'Int', default => 2, deflater => sub {1} },
+    q{SELECT * FROM foo WHERE id IN (?) ORDER BY e LIMIT ?}
+);
+
 
 sub retrieve_all_foo {
     my $self = shift;
