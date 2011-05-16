@@ -1,7 +1,7 @@
 Revision history for Perl extension DBIx::Sunny
 
 0.09    Mon May 16 10:21:10 2011
-        - [Schema] added filter function
+        - [Schema] added filter functions
 
 0.08    Fri May 13 14:47:41 2011
         - [Schema] bugfix, at handling ArrayRef[Num]
