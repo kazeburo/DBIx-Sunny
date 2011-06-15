@@ -1,5 +1,8 @@
 Revision history for Perl extension DBIx::Sunny
 
+0.11    Thu Jun 16 00:24:57 2011
+        - [Schema] pass instance object to filter
+
 0.10    Mon May 16 10:21:10 2011
         - [Schema] support defalting
 
