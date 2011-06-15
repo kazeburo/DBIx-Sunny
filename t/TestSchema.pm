@@ -34,6 +34,7 @@ __PACKAGE__->select_row(
     sub {
         my $row = shift;
         $row->{e} = $row->{e} * $row->{e};
+        $row->{ref} = ref $_[0];
     }
 );
 
@@ -56,6 +57,7 @@ __PACKAGE__->select_all(
     sub {
         my $row = shift;
         $row->{e} = $row->{e} * $row->{e};
+        $row->{ref} = ref $_[0];
     }
 );
 

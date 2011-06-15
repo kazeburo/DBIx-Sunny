@@ -29,7 +29,7 @@ ok ! capture_merged { $schema->select_one_foo() };
 is_deeply $schema->select_row_foo(), { id=>1, e => 3 };
 ok ! capture_merged { $schema->select_row_foo() };
 
-is_deeply $schema->select_row_foo_filter(), { id=>1, e => 9 };
+is_deeply $schema->select_row_foo_filter(), { id=>1, e => 9, ref => 't::TestSchema' };
 
 is join('|', map { $_->{e} } @{$schema->select_all_foo()}), '3|4';
 is_deeply $schema->select_all_foo(limit=>1), [{ id=>1, e => 3 }];

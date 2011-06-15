@@ -35,8 +35,9 @@ sub select_one {
     my @args = @_;
     $class->__setup_accessor(
         sub {
-            my $cb = shift;
-            my ( $sth, $ret ) = $cb->(@_);
+            my $do_query = shift;
+            my $self = shift;
+            my ( $sth, $ret ) = $do_query->($self,@_);
             my $row = $sth->fetchrow_arrayref;
             $sth->finish;
             return unless $row;
@@ -59,13 +60,14 @@ sub select_row {
     my @args = @_;
     $class->__setup_accessor(
         sub {
-            my $cb = shift;
-            my ( $sth, $ret ) = $cb->(@_);
+            my $do_query = shift;
+            my $self = shift;
+            my ( $sth, $ret ) = $do_query->($self,@_);
             my $row = $sth->fetchrow_hashref;
             $sth->finish;
             return unless $row;
             if ( $filter ) {
-                $filter->($row);
+                $filter->($row, $self);
             }
             return $row;
         },
@@ -86,11 +88,12 @@ sub select_all {
     $class->__setup_accessor(
         sub {
             my $do_query = shift;
-            my ( $sth, $ret ) = $do_query->(@_);
+            my $self = shift;
+            my ( $sth, $ret ) = $do_query->($self,@_);
             my @rows;
             while( my $row = $sth->fetchrow_hashref ) {
                 if ( $filter ) {
-                    $filter->($row);
+                    $filter->($row, $self);
                 }
                 push @rows, $row;
             }
@@ -195,7 +198,7 @@ sub __setup_accessor {
                 $modified_query =~ s/\?/$replace_query->()/ge;
                 for my $val ( @val ) {
                     if ( $deflater{$key} ) {
-                        $val = $deflater{$key}->($val);
+                        $val = $deflater{$key}->(wantarray ? ($self,$val) : $val);
                         $type_parameter_bind_type = undef;
                     }
                     push @bind_params, $type_parameter_bind_type
@@ -208,7 +211,7 @@ sub __setup_accessor {
                 my $bind_type = $self->type2bind($type);
                 my $val = $args->{$key};
                 if ( $deflater{$key} ) {
-                    $val = $deflater{$key}->($val);
+                    $val = $deflater{$key}->(wantarray ? ($self,$val) : $val);
                     $bind_type = undef;
                 }
                 push @bind_params, $bind_type
@@ -415,11 +418,13 @@ If you passed CodeRef to builder, this CodeRef will be applied for results.
       limit  => { isa => 'Uint', default => 10 },
       'SELECT * FROM articles WHERE ORDER BY created_on LIMIT ?',
       sub {
-          my $row = shift;
+          my ($row,$self)= @_;
           $row->{created_on} = DateTime::Format::MySQL->parse_datetime($row->{created_on});
           $row->{created_on}->set_time_zone("Asia/Tokyo");
       }
   );
+
+Second argument of filter CodeRef is instance object of your SQL class.
 
 =item DEFLATING
 
