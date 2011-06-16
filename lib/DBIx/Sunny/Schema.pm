@@ -198,7 +198,7 @@ sub __setup_accessor {
                 $modified_query =~ s/\?/$replace_query->()/ge;
                 for my $val ( @val ) {
                     if ( $deflater{$key} ) {
-                        $val = $deflater{$key}->(wantarray ? ($self,$val) : $val);
+                        $val = $deflater{$key}->($val);
                         $type_parameter_bind_type = undef;
                     }
                     push @bind_params, $type_parameter_bind_type
@@ -211,7 +211,7 @@ sub __setup_accessor {
                 my $bind_type = $self->type2bind($type);
                 my $val = $args->{$key};
                 if ( $deflater{$key} ) {
-                    $val = $deflater{$key}->(wantarray ? ($self,$val) : $val);
+                    $val = $deflater{$key}->($val);
                     $bind_type = undef;
                 }
                 push @bind_params, $bind_type
