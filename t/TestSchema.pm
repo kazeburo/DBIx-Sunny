@@ -90,5 +90,20 @@ sub retrieve_all_foo {
     $self->select_all(q{SELECT * FROM foo ORDER BY e LIMIT ?}, $args->{limit});
 }
 
+sub deflate_args {
+    my $self = shift;
+    my $args = $self->args(
+        created => {
+            isa => 'Time::tm',
+            deflater => sub { 'TestTm' }
+        },
+    );
+    $args->{created};
+}
+
+1;
+
+package t::TestObject;
+
 1;
 

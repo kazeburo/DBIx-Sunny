@@ -14,6 +14,7 @@ $Carp::Internal{"DBIx::Sunny::Schema"} = 1;
 Class::Accessor::Lite->mk_ro_accessors(qw/dbh readonly/);
 
 __PACKAGE__->mk_classdata( '__validators' );
+__PACKAGE__->mk_classdata( '__deflaters' );
 
 sub new {
     my $class = shift;
@@ -131,12 +132,30 @@ sub args {
 
     my $class = ref $self ? ref $self : $self;
     my $method = [caller(1)]->[3];
-    my @rules = @_;
+
+
     my $validators = $class->__validators;
     if ( !$validators ) {
         $validators = $class->__validators({});
     }
+    my $deflaters = $class->__deflaters;
+    if ( !$deflaters ) {
+        $deflaters = $class->__deflaters({});
+    }
+
     if ( ! exists $validators->{$method} ) {
+        my @rules;
+        my %deflater;
+        while ( my ($name,$rule) = splice @_, 0, 2 ) {
+            $rule = ref $rule ? $rule : { isa => $rule };
+            if ( my $deflater = delete $rule->{deflater} ) {
+                croak("deflater must be CodeRef in rule:$name")
+                    if ( !ref($deflater) || ref($deflater) ne 'CODE');
+                $deflater{$name} = $deflater;
+            }
+            push @rules, $name, $rule;
+        } 
+        $deflaters->{$method} = \%deflater;
         $validators->{$method} = Data::Validator->new(@rules);
     }
 
@@ -149,7 +168,16 @@ sub args {
     }
     local $Carp::CarpLevel = 3;
     local $Carp::Internal{'Data::Validator'} = 1;   
-    $validators->{$method}->validate(@caller_args);
+    my $result = $validators->{$method}->validate(@caller_args);
+
+    if ( my @deflaters = keys %{$deflaters->{$method}} ) {
+        &Internals::SvREADONLY($result, 0);
+        for ( @deflaters ) {
+            $result->{$_} = $deflaters->{$method}->{$_}->($result->{$_});
+        }
+        &Internals::SvREADONLY($result, 1);
+    }
+    $result;
 }
 
 sub __setup_accessor {
@@ -492,12 +520,17 @@ Shortcut for $self->dbh->last_insert_id()
 
 =item args(@rule) :HashRef
 
-Shortcut for using Data::Validator. Data::Validator instance will cache at first time.
+Shortcut for using Data::Validator. Optional deflater arguments can be used.
+Data::Validator instance will cache at first time.
 
   sub retrieve_user {
       my $self = shift;
       my $args = $self->args(
-          id => 'Int'
+          id => 'Int',
+          created_on => {
+              isa => 'DateTime',
+              deflater => sub { shift->strftime('%Y-%m-%d %H:%M:%S')
+          },
       );
       $arg->{id} ...
   }
