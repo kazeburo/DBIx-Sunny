@@ -1,7 +1,10 @@
 Revision history for Perl extension DBIx::Sunny
 
+0.13    Thu Jun 24 16:19:33 2011
+	- [Schema] support deflating in args
+
 0.12    Thu Jun 16 18:25:01 2011
-	- [Schema} bug fix. test code remains
+	- [Schema] bug fix. test code remains
 
 0.11    Thu Jun 16 00:24:57 2011
         - [Schema] pass instance object to filter
