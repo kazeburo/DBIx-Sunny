@@ -22,6 +22,7 @@ is( $dbh->last_insert_id, 2 );
 is $dbh->select_one(q{SELECT COUNT(*) FROM foo}), 2;
 is_deeply $dbh->select_row(q{SELECT * FROM foo ORDER BY e}), { id => 1, e => 3 };
 is join('|', map { $_->{e} } @{$dbh->select_all(q{SELECT * FROM foo ORDER BY e})}), '3|4';
+is join('|', map { $_->{e} } @{$dbh->select_all(q{SELECT * FROM foo WHERE e IN (?)},[3,4])}), '3|4';
 
 subtest 'utf8' => sub {
     use utf8;

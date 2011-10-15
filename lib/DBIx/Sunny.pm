@@ -5,7 +5,7 @@ use warnings;
 use 5.008005;
 use DBI 1.615;
 
-our $VERSION = '0.13';
+our $VERSION = '0.14';
 
 use parent qw/DBI/;
 
@@ -97,28 +97,61 @@ sub do {
     $self->SUPER::do($self->__set_comment($query), $attr, @bind);
 }
 
+sub fill_arrayref {
+    my $self = shift;
+    my ($query, @bind) = @_;
+    return if ! defined $query;
+    my @bind_param;
+    my $modified_query = $query;
+    my $i=1;
+    for my $bind ( @bind ) {
+        if ( ref($bind) && ref($bind) eq 'ARRAY' ) {
+            my $array_query = substr('?,' x scalar(@{$bind}), 0, -1);
+            my $search_i=0;
+            my $replace_query = sub {
+                $search_i++;
+                if ( $search_i == $i ) {
+                    return $array_query;
+                }
+                return '?';
+            };
+            $modified_query =~ s/\?/$replace_query->()/ge;
+            push @bind_param, @{$bind};
+        }
+        else {
+            push @bind_param, $bind;
+        }
+        $i++;
+    }
+    return ($modified_query, @bind_param);
+}
+
 sub select_one {
-    my ($self, $query, @bind) = @_;
+    my $self = shift;
+    my ($query, @bind) = $self->fill_arrayref(@_);
     my $row = $self->selectrow_arrayref($query, {}, @bind);
     return unless $row;
     return $row->[0];
 }
 
 sub select_row {
-    my ($self, $query, @bind) = @_;
+    my $self = shift;
+    my ($query, @bind) = $self->fill_arrayref(@_);
     my $row = $self->selectrow_hashref($query, {}, @bind);
     return unless $row;
     return $row;
 }
 
 sub select_all {
-    my ($self, $query, @bind) = @_;
+    my $self = shift;
+    my ($query, @bind) = $self->fill_arrayref(@_);
     my $rows = $self->selectall_arrayref($query, { Slice => {} }, @bind);
     return $rows;
 }
 
 sub query {
-    my ($self, $query, @bind) = @_;
+    my $self = shift;
+    my ($query, @bind) = $self->fill_arrayref(@_);
     my $sth = $self->prepare($query);
     $sth->execute(@bind);
 }
@@ -196,6 +229,14 @@ DBIx::Sunny adds file name and line number as SQL comment that invokes SQL state
 =item Easy access to last_insert_id
 
 DBIx::Sunny's last_insert_id needs no arguments. It's shortcut for mysql_insertid or last_insert_rowid.
+
+=item Auto expanding arrayref bind parameters
+
+select_(one|row|all) and  query methods support auto-expanding arrayref bind parameters.
+
+  $dbh->select_all('SELECT * FROM id IN (?)', [1 2 3])
+  #SQL: 'SELECT * FROM id IN (?,?,")'
+  #@BIND: (1, 2, 3)
 
 =back
 

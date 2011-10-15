@@ -1,5 +1,8 @@
 Revision history for Perl extension DBIx::Sunny
 
+0.14    Sat Oct 15 14:47:08 2011
+	- support expanding arrayref in select_(one|row|all) and query
+
 0.13    Thu Jun 24 16:19:33 2011
 	- [Schema] support deflating in args
 

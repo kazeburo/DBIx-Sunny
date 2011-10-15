@@ -25,10 +25,40 @@ sub new {
     }, $class;
 };
 
+sub fill_arrayref {
+    my $self = shift;
+    my ($query, @bind) = @_;
+    return if ! defined $query;
+    my @bind_param;
+    my $modified_query = $query;
+    my $i=1;
+    for my $bind ( @bind ) {
+        if ( ref($bind) && ref($bind) eq 'ARRAY' ) {
+            my $array_query = substr('?,' x scalar(@{$bind}), 0, -1);
+            my $search_i=0;
+            my $replace_query = sub {
+                $search_i++;
+                if ( $search_i == $i ) {
+                    return $array_query;
+                }
+                return '?';
+            };
+            $modified_query =~ s/\?/$replace_query->()/ge;
+            push @bind_param, @{$bind};
+        }
+        else {
+            push @bind_param, $bind;
+        }
+        $i++;
+    }
+    return ($modified_query, @bind_param);
+}
+
+
 sub select_one {
     my $class = shift;
     if ( ref $class ) {
-        my ( $query, @bind) = @_;
+        my ($query, @bind) = $class->fill_arrayref(@_);
         my $row = $class->dbh->selectrow_arrayref($query, {}, @bind);
         return unless $row;
         return $row->[0];
@@ -51,7 +81,7 @@ sub select_one {
 sub select_row {
     my $class = shift;
     if ( ref $class ) {
-        my ( $query, @bind) = @_;
+        my ($query, @bind) = $class->fill_arrayref(@_);
         my $row = $class->dbh->selectrow_hashref($query, {}, @bind);
         return unless $row;
         return $row;
@@ -79,7 +109,7 @@ sub select_row {
 sub select_all {
     my $class = shift;
     if ( ref $class ) {
-        my ( $query, @bind) = @_;
+        my ($query, @bind) = $class->fill_arrayref(@_);
         my $rows = $class->dbh->selectall_arrayref($query, { Slice => {} }, @bind);
         return $rows;
     }
@@ -108,7 +138,7 @@ sub select_all {
 sub query {
     my $class = shift;
     if ( ref $class ) {
-        my ( $query, @bind) = @_;
+        my ($query, @bind) = $class->fill_arrayref(@_);
         croak "couldnot use query for readonly database handler" if $class->readonly;
         my $sth = $class->prepare($query);
         return $sth->execute(@bind);
