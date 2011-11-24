@@ -5,7 +5,7 @@ use warnings;
 use 5.008005;
 use DBI 1.615;
 
-our $VERSION = '0.14';
+our $VERSION = '0.15';
 
 use parent qw/DBI/;
 
@@ -17,6 +17,7 @@ sub connect {
     $attr->{ShowErrorStatement} = 1;
     $attr->{AutoInactiveDestroy} = 1;
     if ($dsn =~ /^(?i:dbi):SQLite:/) {
+        $attr->{sqlite_use_immediate_transaction} = 1;
         $attr->{sqlite_unicode} = 1 unless exists $attr->{sqlite_unicode};
     }
     if ($dsn =~ /^(?i:dbi):mysql:/ && ! exists $attr->{mysql_enable_utf8} ) {
@@ -38,6 +39,7 @@ sub connected {
     $dbh->{ShowErrorStatement} = 1;
     $dbh->{AutoInactiveDestroy} = 1;
     if ($dsn =~ /^dbi:SQLite:/) {
+        $dbh->{sqlite_use_immediate_transaction} = 1;
         $dbh->{sqlite_unicode} = 1 unless exists $attr->{sqlite_unicode};
     }
     if ($dsn =~ /^dbi:mysql:/ && ! exists $attr->{mysql_enable_utf8} ) {
@@ -213,6 +215,10 @@ DBIx::Sunny set AutoInactiveDestroy as true.
 =item Set sqlite_unicode and mysql_enable_utf8 automatically
 
 DBIx::Sunny set sqlite_unicode and mysql_enable_utf8 automatically.
+
+=item Set sqlite_use_immediate_transaction
+
+DBIx::Sunny set sqlite_use_immediate_transaction to true.
 
 =item Nested transaction management.
 

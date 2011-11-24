@@ -14,7 +14,7 @@ author_tests 'xt';
 
 test_requires 'Test::More', 0.96;
 test_requires 'Test::Requires';
-test_requires 'DBD::SQLite', 1.27;
+test_requires 'DBD::SQLite', 1.31;
 test_requires 'Capture::Tiny';
 
 test_requires 'Test::mysqld'     if $Module::Install::AUTHOR;

@@ -1,5 +1,9 @@
 Revision history for Perl extension DBIx::Sunny
 
+0.15    Thu Nov 24 11:29:30 2011
+        - set sqlite_use_immediate_transaction attribute on
+        - require DBD::SQLite >= 1.31
+
 0.14    Sat Oct 15 14:47:08 2011
 	- support expanding arrayref in select_(one|row|all) and query
 
