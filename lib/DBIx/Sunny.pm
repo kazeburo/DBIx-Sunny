@@ -41,6 +41,10 @@ sub connected {
     if ($dsn =~ /^dbi:SQLite:/) {
         $dbh->{sqlite_use_immediate_transaction} = 1;
         $dbh->{sqlite_unicode} = 1 unless exists $attr->{sqlite_unicode};
+
+        $dbh->do("PRAGMA journal_mode = WAL");
+        $dbh->do("PRAGMA synchronous = NORMAL");
+
     }
     if ($dsn =~ /^dbi:mysql:/ && ! exists $attr->{mysql_enable_utf8} ) {
         $dbh->{mysql_enable_utf8} = 1;
@@ -210,15 +214,18 @@ DBIx::Sunny supports only SQLite and MySQL.
 
 =item Set AutoInactiveDestroy to true.
 
-DBIx::Sunny set AutoInactiveDestroy as true.
+DBIx::Sunny sets AutoInactiveDestroy as true.
 
-=item Set sqlite_unicode and mysql_enable_utf8 automatically
+=item [SQLite/MySQL] Auto encode/decode utf-8
 
-DBIx::Sunny set sqlite_unicode and mysql_enable_utf8 automatically.
+DBIx::Sunny sets sqlite_unicode and mysql_enable_utf8 automatically.
 
-=item Set sqlite_use_immediate_transaction
+=item [SQLite] Performance tuning
 
-DBIx::Sunny set sqlite_use_immediate_transaction to true.
+DBIx::Sunny sets sqlite_use_immediate_transaction to true, and executes these PRAGMA statements
+
+  PRAGMA journal_mode = WAL
+  PRAGMA synchronous = NORMAL
 
 =item Nested transaction management.
 
@@ -226,7 +233,7 @@ DBIx::Sunny supports nested transaction management based on RAII like DBIx::Clas
 
 =item Error Handling
 
-DBIx::Sunny set RaiseError and ShowErrorStatement as true. DBIx::Sunny raises exception and shows current statement if your $dbh occurred exception.
+DBIx::Sunny sets RaiseError and ShowErrorStatement as true. DBIx::Sunny raises exception and shows current statement if your $dbh occurred exception.
 
 =item SQL comment
 

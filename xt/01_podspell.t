@@ -27,3 +27,5 @@ ShowErrorStatement
 SQL's
 validator
 deflater
+utf
+
