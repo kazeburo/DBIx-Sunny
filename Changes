@@ -1,5 +1,8 @@
 Revision history for Perl extension DBIx::Sunny
 
+0.16    Fri Jun 8 18:01:19 2012
+        - [sqlite] set journal_mode and synchronous
+
 0.15    Thu Nov 24 11:29:30 2011
         - set sqlite_use_immediate_transaction attribute on
         - require DBD::SQLite >= 1.31
