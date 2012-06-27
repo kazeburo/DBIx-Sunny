@@ -1,5 +1,8 @@
 Revision history for Perl extension DBIx::Sunny
 
+0.17    Wed Jun 27 22:16:11 2012
+        - fixed fill_arrayref() with multiple arrayref binds ( Thank you motemen san)
+
 0.16    Fri Jun 8 18:01:19 2012
         - [sqlite] set journal_mode and synchronous
 
