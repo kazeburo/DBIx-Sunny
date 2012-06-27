@@ -108,28 +108,19 @@ sub fill_arrayref {
     my ($query, @bind) = @_;
     return if ! defined $query;
     my @bind_param;
-    my $modified_query = $query;
-    my $i=1;
-    for my $bind ( @bind ) {
-        if ( ref($bind) && ref($bind) eq 'ARRAY' ) {
-            my $array_query = substr('?,' x scalar(@{$bind}), 0, -1);
-            my $search_i=0;
-            my $replace_query = sub {
-                $search_i++;
-                if ( $search_i == $i ) {
-                    return $array_query;
-                }
-                return '?';
-            };
-            $modified_query =~ s/\?/$replace_query->()/ge;
-            push @bind_param, @{$bind};
-        }
-        else {
+    $query =~ s{
+        \?
+    }{
+        my $bind = shift @bind;
+        if (ref($bind) && ref($bind) eq 'ARRAY') {
+            push @bind_param, @$bind;
+            join ',', ('?') x @$bind;
+        } else {
             push @bind_param, $bind;
+            '?';
         }
-        $i++;
-    }
-    return ($modified_query, @bind_param);
+    }gex;
+    return ( $query, @bind_param );
 }
 
 sub select_one {
