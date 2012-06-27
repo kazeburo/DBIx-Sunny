@@ -52,5 +52,14 @@ for my $func (@func) {
 
 is $dbh->connect_info->[0], 'dbi:SQLite::memory:';
 
+my ($query, @binds) = $dbh->fill_arrayref(
+    'SELECT * FROM foo WHERE e IN (?) OR e IN (?)',
+    [ 'a', 'b' ],
+    [ 'x', 'y', 'z' ],
+);
+
+is $query, 'SELECT * FROM foo WHERE e IN (?,?) OR e IN (?,?,?)';
+is_deeply \@binds, [ 'a', 'b', 'x', 'y', 'z' ];
+
 done_testing();
 
