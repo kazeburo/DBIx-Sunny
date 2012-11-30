@@ -302,8 +302,7 @@ sub type2bind {
 
 sub txn_scope {
     my $self = shift;
-    $self->{__txn} ||= DBIx::TransactionManager->new($self->dbh);
-    $self->{__txn}->txn_scope( caller => [caller(0)] );
+    DBIx::TransactionManager->new($self->dbh)->txn_scope( caller => [caller(0)] );
 }
 
 sub prepare {

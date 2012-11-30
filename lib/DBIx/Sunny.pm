@@ -59,17 +59,9 @@ sub connected {
 
 sub connect_info { $_[0]->{private_connect_info} }
 
-sub _txn_manager {
-    my $self = shift;
-    if (!defined $self->{private_txn_manager}) {
-        $self->{private_txn_manager} = DBIx::TransactionManager->new($self);
-    }
-    return $self->{private_txn_manager};
-}
-
 sub txn_scope {
     my $self = shift;
-    $self->_txn_manager->txn_scope(
+    DBIx::TransactionManager->new($self)->txn_scope(
         caller => [caller(0)]
     );
 }
