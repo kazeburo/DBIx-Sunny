@@ -1,5 +1,8 @@
 Revision history for Perl extension DBIx::Sunny
 
+0.18    Fri Nov 30 13:03:48 2012
+        - fixed cyclic reference with txn_scope
+
 0.17    Wed Jun 27 22:16:11 2012
         - fixed fill_arrayref() with multiple arrayref binds ( Thank you motemen san)
 
