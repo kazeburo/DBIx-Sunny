@@ -302,7 +302,13 @@ sub type2bind {
 
 sub txn_scope {
     my $self = shift;
-    DBIx::TransactionManager->new($self->dbh)->txn_scope( caller => [caller(0)] );
+    if ( ! $self->{private_txt_manager} ) {
+        $self->{private_txt_manager} = DBIx::TransactionManager->new($self);
+        weaken($self->{private_txt_manager}->{dbh});
+    } 
+    $self->{private_txt_manager}->txn_scope(
+        caller => [caller(0)]
+    );
 }
 
 sub prepare {
