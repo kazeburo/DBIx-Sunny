@@ -1,5 +1,9 @@
 Revision history for Perl extension DBIx::Sunny
 
+0.19    Tue Dec 4 13:48:22 2012
+        - fixed cyclic reference bug
+          0.18 txn_scope is broken. don't use it
+
 0.18    Fri Nov 30 13:03:48 2012
         - fixed cyclic reference with txn_scope
 
