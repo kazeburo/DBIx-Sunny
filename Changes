@@ -1,5 +1,8 @@
 Revision history for Perl extension DBIx::Sunny
 
+0.20    Tue Dec 4 14:00:33 2012
+        - [Schema] Schema does not need weaken in txn_scope
+
 0.19    Tue Dec 4 13:48:22 2012
         - fixed cyclic reference bug
           0.18 txn_scope is broken. don't use it
