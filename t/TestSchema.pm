@@ -9,7 +9,7 @@ __PACKAGE__->query(
     q{CREATE TABLE foo (
     id INTEGER NOT NULL PRIMARY KEY,
     e VARCHAR(10)
-) }
+)}
 );
 
 __PACKAGE__->query(
