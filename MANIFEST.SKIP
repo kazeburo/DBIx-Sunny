@@ -20,7 +20,7 @@
 ^\.git/
 \.sw[po]$
 MYMETA.*
-
+\.travis\.yml
 ^[^/]+\.gz$
 ^Build$
 ^ppport.h$
