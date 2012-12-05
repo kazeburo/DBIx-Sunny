@@ -571,7 +571,7 @@ $args is validated arguments. @_ is not needed.
 
 =head1 AUTHOR
 
-Masahiro Nagano E<lt>kazeburo {at} gmail.comE<gt>
+Masahiro Nagano E<lt>kazeburo KZBRKZBR@ gmail.comE<gt>
 
 =head1 SEE ALSO
 

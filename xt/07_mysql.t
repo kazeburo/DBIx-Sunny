@@ -3,10 +3,9 @@ use warnings;
 use Test::More;
 use DBIx::Sunny;
 use Encode;
-use Test::mysqld;
-use Test::TCP;
+use Test::Requires qw/Test::mysqld Test::TCP/;
 
-my $port = empty_port();
+my $port = Test::TCP::empty_port();
 
 my $mysqld = Test::mysqld->new(
     my_cnf => {

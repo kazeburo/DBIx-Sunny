@@ -12,3 +12,16 @@ MANIFEST.bak
 *~
 MYMETA.*
 
+inc/
+ppport.h
+*.bak
+*.old
+Build
+_build/
+xshelper.h
+tags
+blib/
+META.json
+README
+^inc/
+DBIx-Sunny-*/
