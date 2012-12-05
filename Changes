@@ -1,5 +1,9 @@
 Revision history for Perl extension DBIx::Sunny
 
+0.21    Wed Dec 5 15:04:58 2012
+        - add schema txn test
+        - switch to Module::Build
+
 0.20    Tue Dec 4 14:00:33 2012
         - [Schema] Schema does not need weaken in txn_scope
 
