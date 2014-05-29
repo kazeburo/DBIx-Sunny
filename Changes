@@ -1,5 +1,7 @@
 Revision history for Perl extension DBIx::Sunny
 
+{{$NEXT}}
+
 0.21    Wed Dec 5 15:04:58 2012
         - add schema txn test
         - switch to Module::Build

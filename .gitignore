@@ -21,7 +21,14 @@ _build/
 xshelper.h
 tags
 blib/
-META.json
 README
 ^inc/
 DBIx-Sunny-*/
+/DBIx-Sunny-*
+/.build
+/_build_params
+/Build
+/Build.bat
+!Build/
+!META.json
+!LICENSE
