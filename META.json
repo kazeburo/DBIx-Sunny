@@ -76,7 +76,7 @@
          "web" : "https://github.com/kazeburo/DBIx-Sunny"
       }
    },
-   "version" : "0.21",
+   "version" : "0.22",
    "x_contributors" : [
       "motemen <motemen@gmail.com>",
       "Masahiro Nagano <kazeburo@gmail.com>"
