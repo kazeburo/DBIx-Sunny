@@ -146,24 +146,42 @@ sub __prepare_and_execute {
 
 sub select_one {
     my $self = shift;
-    my ($query, @bind) = $self->fill_arrayref(@_);
-    my $row = $self->selectrow_arrayref($query, {}, @bind);
+    my ($query, $maybe_typed, @bind) = $self->__fill_arrayref(@_);
+    my $row;
+    if ( $maybe_typed ) {
+        my ($sth, $ret) = $self->__prepare_and_execute($query, @bind);
+        $row = $ret && $sth->fetchrow_arrayref;
+    } else {
+        $row = $self->selectrow_arrayref($query, {}, @bind);
+    }
     return unless $row;
     return $row->[0];
 }
 
 sub select_row {
     my $self = shift;
-    my ($query, @bind) = $self->fill_arrayref(@_);
-    my $row = $self->selectrow_hashref($query, {}, @bind);
+    my ($query, $maybe_typed, @bind) = $self->__fill_arrayref(@_);
+    my $row;
+    if ( $maybe_typed ) {
+        my ($sth, $ret) = $self->__prepare_and_execute($query, @bind);
+        $row = $ret && $sth->fetchrow_hashref;
+    } else {
+        $row = $self->selectrow_hashref($query, {}, @bind);
+    }
     return unless $row;
     return $row;
 }
 
 sub select_all {
     my $self = shift;
-    my ($query, @bind) = $self->fill_arrayref(@_);
-    my $rows = $self->selectall_arrayref($query, { Slice => {} }, @bind);
+    my ($query, $maybe_typed, @bind) = $self->__fill_arrayref(@_);
+    my $rows;
+    if ( $maybe_typed ) {
+        my ($sth, $ret) = $self->__prepare_and_execute($query, @bind);
+        $rows = $ret && $sth->fetchall_arrayref({});
+    } else {
+        $rows = $self->selectall_arrayref($query, { Slice => {} }, @bind);
+    }
     return $rows;
 }
 
