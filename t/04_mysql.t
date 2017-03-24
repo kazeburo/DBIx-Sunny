@@ -3,7 +3,8 @@ use warnings;
 use Test::More;
 use DBIx::Sunny;
 use Encode;
-use Test::Requires qw/Test::mysqld Test::TCP/;
+use DBI;
+use Test::Requires qw/Test::mysqld Test::TCP SQL::Maker::SQLType/;
 
 my $port = Test::TCP::empty_port();
 
@@ -43,6 +44,18 @@ subtest 'utf8' => sub {
     my ($x) = $dbh->selectrow_array(q{SELECT x FROM bar});
     is $x, "こんにちは";
     ok( Encode::is_utf8($x) );
+};
+
+subtest 'binary' => sub {
+    ok( $dbh->query(q{CREATE TABLE baz (
+    id INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    x VARBINARY(10)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+}));
+    ok( $dbh->query(q{INSERT INTO baz (x) VALUES (?)}, SQL::Maker::SQLType::sql_type(\ "\xDE\xAD\xBE\xEF", DBI::SQL_VARBINARY)) );
+    my ($x) = $dbh->selectrow_array(q{SELECT x FROM baz});
+    is $x, "\xDE\xAD\xBE\xEF";
+    ok( ! Encode::is_utf8($x) );
 };
 
 eval {
