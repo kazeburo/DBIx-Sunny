@@ -20,7 +20,7 @@ sub connect {
         $attr->{sqlite_use_immediate_transaction} = 1;
         $attr->{sqlite_unicode} = 1 unless exists $attr->{sqlite_unicode};
     }
-    if ($dsn =~ /^(?i:dbi):mysql:/ && ! exists $attr->{mysql_enable_utf8} ) {
+    if ($dsn =~ /^(?i:dbi):mysql:/ && ! exists $attr->{mysql_enable_utf8} && ! exists $attr->{mysql_enable_utf8mb4} ) {
         $attr->{mysql_enable_utf8} = 1;
     }
     $class->SUPER::connect($dsn, $user, $pass, $attr);
@@ -47,7 +47,7 @@ sub connected {
         $dbh->do("PRAGMA synchronous = NORMAL");
 
     }
-    if ($dsn =~ /^dbi:mysql:/ && ! exists $attr->{mysql_enable_utf8} ) {
+    if ($dsn =~ /^dbi:mysql:/ && ! exists $attr->{mysql_enable_utf8} && ! exists $attr->{mysql_enable_utf8mb4} ) {
         $dbh->{mysql_enable_utf8} = 1;
         $dbh->do("SET NAMES utf8");
     }
