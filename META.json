@@ -4,7 +4,7 @@
       "Masahiro Nagano <kazeburo KZBRKZBR@ gmail.com>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Minilla/v1.0.0, CPAN::Meta::Converter version 2.141170",
+   "generated_by" : "Minilla/v3.0.10, CPAN::Meta::Converter version 2.150005",
    "license" : [
       "perl_5"
    ],
@@ -28,9 +28,7 @@
    "prereqs" : {
       "configure" : {
          "requires" : {
-            "CPAN::Meta" : "0",
-            "CPAN::Meta::Prereqs" : "0",
-            "Module::Build" : "0.38"
+            "Module::Build::Tiny" : "0.035"
          }
       },
       "develop" : {
@@ -79,6 +77,8 @@
    "version" : "0.22",
    "x_contributors" : [
       "motemen <motemen@gmail.com>",
+      "nanto_vi <nanto@moon.email.ne.jp>",
       "Masahiro Nagano <kazeburo@gmail.com>"
-   ]
+   ],
+   "x_serialization_backend" : "JSON::PP version 2.27400"
 }

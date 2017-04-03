@@ -2,6 +2,10 @@ Revision history for Perl extension DBIx::Sunny
 
 {{$NEXT}}
 
+        - Support mysql_enable_utf8mb4
+        - Accept SQL::Maker::SQLType objects as bound values
+        Thank you nanto!
+
 0.22 2014-05-29T05:49:43Z
 
         - re-packaging with Minilla
