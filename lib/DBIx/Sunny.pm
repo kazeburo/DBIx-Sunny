@@ -30,7 +30,7 @@ package DBIx::Sunny::db;
 our @ISA = qw(DBI::db);
 
 use DBIx::TransactionManager;
-use Scalar::Util qw/weaken/;
+use Scalar::Util qw/weaken blessed/;
 
 sub connected {
     my $dbh = shift;
@@ -100,7 +100,7 @@ sub do {
     $self->SUPER::do($self->__set_comment($query), $attr, @bind);
 }
 
-sub fill_arrayref {
+sub __fill_arrayref {
     my $self = shift;
     my ($query, @bind) = @_;
     return if ! defined $query;
@@ -117,37 +117,85 @@ sub fill_arrayref {
             '?';
         }
     }gex;
-    return ( $query, @bind_param );
+    my $maybe_typed = scalar(grep { ref($_) } @bind_param);
+    return ( $query, $maybe_typed, @bind_param );
+}
+
+sub fill_arrayref {
+    my $self = shift;
+    my ($query, undef, @bind) = $self->__fill_arrayref(@_);
+    return ( $query, @bind );
+}
+
+sub __prepare_and_execute {
+    my $self = shift;
+    my ($query, @bind) = @_;
+    my $sth = $self->prepare($query);
+    my $i = 0;
+    for my $bind ( @bind ) {
+        if ( blessed($bind) && $bind->can('value_ref') && $bind->can('type') ) {
+            # If $bind is an SQL::Maker::SQLType or compatible object, use its type info.
+            $sth->bind_param(++$i, ${ $bind->value_ref }, $bind->type);
+        } else {
+            $sth->bind_param(++$i, $bind);
+        }
+    }
+    my $ret = $sth->execute;
+    return ( $sth, $ret );
 }
 
 sub select_one {
     my $self = shift;
-    my ($query, @bind) = $self->fill_arrayref(@_);
-    my $row = $self->selectrow_arrayref($query, {}, @bind);
+    my ($query, $maybe_typed, @bind) = $self->__fill_arrayref(@_);
+    my $row;
+    if ( $maybe_typed ) {
+        my ($sth, $ret) = $self->__prepare_and_execute($query, @bind);
+        $row = $ret && $sth->fetchrow_arrayref;
+    } else {
+        $row = $self->selectrow_arrayref($query, {}, @bind);
+    }
     return unless $row;
     return $row->[0];
 }
 
 sub select_row {
     my $self = shift;
-    my ($query, @bind) = $self->fill_arrayref(@_);
-    my $row = $self->selectrow_hashref($query, {}, @bind);
+    my ($query, $maybe_typed, @bind) = $self->__fill_arrayref(@_);
+    my $row;
+    if ( $maybe_typed ) {
+        my ($sth, $ret) = $self->__prepare_and_execute($query, @bind);
+        $row = $ret && $sth->fetchrow_hashref;
+    } else {
+        $row = $self->selectrow_hashref($query, {}, @bind);
+    }
     return unless $row;
     return $row;
 }
 
 sub select_all {
     my $self = shift;
-    my ($query, @bind) = $self->fill_arrayref(@_);
-    my $rows = $self->selectall_arrayref($query, { Slice => {} }, @bind);
+    my ($query, $maybe_typed, @bind) = $self->__fill_arrayref(@_);
+    my $rows;
+    if ( $maybe_typed ) {
+        my ($sth, $ret) = $self->__prepare_and_execute($query, @bind);
+        $rows = $ret && $sth->fetchall_arrayref({});
+    } else {
+        $rows = $self->selectall_arrayref($query, { Slice => {} }, @bind);
+    }
     return $rows;
 }
 
 sub query {
     my $self = shift;
-    my ($query, @bind) = $self->fill_arrayref(@_);
-    my $sth = $self->prepare($query);
-    $sth->execute(@bind);
+    my ($query, $maybe_typed, @bind) = $self->__fill_arrayref(@_);
+    my $ret;
+    if ( $maybe_typed ) {
+        (undef, $ret) = $self->__prepare_and_execute($query, @bind);
+    } else {
+        my $sth = $self->prepare($query);
+        $ret = $sth->execute(@bind);
+    }
+    return $ret;
 }
 
 sub last_insert_id {
