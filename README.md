@@ -64,6 +64,18 @@ DBIx::Sunny supports only SQLite and MySQL.
         #SQL: 'SELECT * FROM id IN (?,?,")'
         #@BIND: (1, 2, 3)
 
+- Typed bind parameters
+
+    DBIx::Sunny allows you to specify data types of bind parameters. If a bind parameter is [SQL::Maker::SQLType](https://metacpan.org/pod/SQL::Maker::SQLType) object, its value is passed as its type, otherwise it is passed as default type (VARCHAR).
+
+        use SQL::Maker::SQLType qw/sql_type/;
+        use DBI qw/:sql_types/
+
+        $dbh->query(
+            'INSERT INTO bin_table (bin_col) VALUES (?)',
+            sql_type(\"\xDE\xAD\xBE\xEF", SQL_BINARY)),
+        );
+
 # ADDITIONAL METHODS
 
 - $col = $dbh->select\_one($query, @bind);
