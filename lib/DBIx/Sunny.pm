@@ -81,7 +81,7 @@ sub __set_comment {
         my $file = $caller[1];
         $file =~ s!\*/!*\//!g;
         $trace = "/* $file line $caller[2] */"; 
-        last if $caller[0] ne ref($self) && $caller[0] !~ /^(:?DBIx?|DBD)\b/;
+        last if $caller[0] ne ref($self) && $caller[0] !~ /^(:?DBIx?|DBD|Try::Tiny|Context::Preserve)\b/;
         $i++;
     }
     $query =~ s! ! $trace !;
