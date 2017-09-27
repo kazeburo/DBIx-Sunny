@@ -4,10 +4,11 @@ use Test::More;
 use Capture::Tiny qw/capture_merged/;
 use DBIx::Sunny;
 use Test::Requires { 'DBD::SQLite' => 1.27 };
-use t::TestSchema;
+use lib 't/lib/';
+use TestSchema;
 
 my $dbh = DBIx::Sunny->connect('dbi:SQLite::memory:', '', '');
-my $schema = t::TestSchema->new(dbh => $dbh);
+my $schema = TestSchema->new(dbh => $dbh);
 ok($schema);
 
 ok($schema->create_foo_t);
@@ -29,7 +30,7 @@ ok ! capture_merged { $schema->select_one_foo() };
 is_deeply $schema->select_row_foo(), { id=>1, e => 3 };
 ok ! capture_merged { $schema->select_row_foo() };
 
-is_deeply $schema->select_row_foo_filter(), { id=>1, e => 9, ref => 't::TestSchema' };
+is_deeply $schema->select_row_foo_filter(), { id=>1, e => 9, ref => 'TestSchema' };
 
 is join('|', map { $_->{e} } @{$schema->select_all_foo()}), '3|4';
 is_deeply $schema->select_all_foo(limit=>1), [{ id=>1, e => 3 }];

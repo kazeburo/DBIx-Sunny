@@ -3,12 +3,13 @@ use warnings;
 use Test::More;
 use Test::Requires { 'DBD::SQLite' => 1.27 };
 use DBIx::Sunny;
-use t::TestSchema;
+use lib 't/lib/';
+use TestSchema;
 
 
 subtest 'x' => sub {
     my $dbh = DBIx::Sunny->connect('dbi:SQLite::memory:', '', '');
-    my $schema = t::TestSchema->new(dbh => $dbh);
+    my $schema = TestSchema->new(dbh => $dbh);
     $schema->create_foo_t();
     $schema->insert_foo(e=>1);
     {
