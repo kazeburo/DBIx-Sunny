@@ -1,9 +1,10 @@
 use strict;
 use Test::More tests => 2;
+use lib 't/lib/';
 
 BEGIN {
     use_ok 'DBIx::Sunny::Schema';
-    use_ok 't::TestSchema';
+    use_ok 'TestSchema';
  }
 
 

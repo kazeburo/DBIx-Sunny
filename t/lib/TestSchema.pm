@@ -1,4 +1,4 @@
-package t::TestSchema;
+package TestSchema;
 
 use strict;
 use warnings;
