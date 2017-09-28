@@ -96,7 +96,7 @@ DBIx::Sunny supports only SQLite and MySQL.
 
 # AUTHOR
 
-Masahiro Nagano <kazeburo KZBRKZBR@ gmail.com>
+Masahiro Nagano &lt;kazeburo KZBRKZBR@ gmail.com>
 
 # SEE ALSO
 
