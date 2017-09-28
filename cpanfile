@@ -12,4 +12,6 @@ on test => sub {
     requires 'Test::More', '0.98';
     requires 'Test::Requires';
     requires 'Test::TCP';
+    recommends 'DBIx::Class', '0.082840';
+    recommends 'DBIx::Tracer', '0.03';
 };
