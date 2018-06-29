@@ -23,6 +23,9 @@ sub connect {
     if ($dsn =~ /^(?i:dbi):mysql:/ && ! exists $attr->{mysql_enable_utf8} && ! exists $attr->{mysql_enable_utf8mb4} ) {
         $attr->{mysql_enable_utf8} = 1;
     }
+    if ($dsn =~ /^(?i:dbi):Pg:/ && ! exists $attr->{pg_enable_utf8}) {
+        $attr->{pg_enable_utf8} = 1;
+    }
     $class->SUPER::connect($dsn, $user, $pass, $attr);
 }
 
