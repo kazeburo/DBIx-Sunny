@@ -4,6 +4,7 @@ requires 'DBI', '1.615';
 requires 'DBIx::TransactionManager', '0.13';
 requires 'Data::Validator';
 requires 'Scalar::Util';
+requires 'SQL::Maker::SQLType';
 requires 'SQL::NamedPlaceholder', '0.10';
 requires 'parent';
 
