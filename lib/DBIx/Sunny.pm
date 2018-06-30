@@ -33,10 +33,9 @@ sub connect {
 package DBIx::Sunny::db;
 our @ISA = qw(DBI::db);
 
-use DBIx::Sunny::Util qw/bind_and_execute/;
+use DBIx::Sunny::Util qw/bind_and_execute expand_placeholder/;
 use DBIx::TransactionManager;
 use Scalar::Util qw/weaken/;
-use SQL::NamedPlaceholder 0.10;
 
 sub connected {
     my $dbh = shift;
@@ -108,34 +107,12 @@ sub do {
 
 sub fill_arrayref {
     my $self = shift;
-    my ($query, @bind) = @_;
-    return if ! defined $query;
-
-    if (@bind == 1 && ref $bind[0] eq 'HASH') {
-        ($query, my $bind) = SQL::NamedPlaceholder::bind_named($query, $bind[0]);
-        my $maybe_typed = scalar(grep { ref($_) } @$bind);
-        return ($query, $maybe_typed, @$bind);
-    }
-
-    my @bind_param;
-    $query =~ s{
-        \?
-    }{
-        my $bind = shift @bind;
-        if (ref($bind) && ref($bind) eq 'ARRAY') {
-            push @bind_param, @$bind;
-            join ',', ('?') x @$bind;
-        } else {
-            push @bind_param, $bind;
-            '?';
-        }
-    }gex;
-    return ( $query, @bind_param );
+    return expand_placeholder(@_);
 }
 
 sub __prepare_and_execute {
     my $self = shift;
-    my ($query, @bind) = @_;
+    my ($query, @bind) = expand_placeholder(@_);
     my $sth = $self->prepare($query);
     my $ret = bind_and_execute($sth, @bind);
     return ($sth, $ret);
@@ -143,8 +120,7 @@ sub __prepare_and_execute {
 
 sub select_one {
     my $self = shift;
-    my ($query, @bind) = $self->fill_arrayref(@_);
-    my ($sth, $ret) = $self->__prepare_and_execute($query, @bind);
+    my ($sth, $ret) = $self->__prepare_and_execute(@_);
     my $row = $ret && $sth->fetchrow_arrayref;
     return unless $row;
     return $row->[0];
@@ -152,8 +128,7 @@ sub select_one {
 
 sub select_row {
     my $self = shift;
-    my ($query, @bind) = $self->fill_arrayref(@_);
-    my ($sth, $ret) = $self->__prepare_and_execute($query, @bind);
+    my ($sth, $ret) = $self->__prepare_and_execute(@_);
     my $row = $ret && $sth->fetchrow_hashref;
     return unless $row;
     return $row;
@@ -161,16 +136,14 @@ sub select_row {
 
 sub select_all {
     my $self = shift;
-    my ($query, @bind) = $self->fill_arrayref(@_);
-    my ($sth, $ret) = $self->__prepare_and_execute($query, @bind);
+    my ($sth, $ret) = $self->__prepare_and_execute(@_);
     my $rows = $ret && $sth->fetchall_arrayref({});
     return $rows;
 }
 
 sub query {
     my $self = shift;
-    my ($query, @bind) = $self->fill_arrayref(@_);
-    (undef, my $ret) = $self->__prepare_and_execute($query, @bind);
+    (undef, my $ret) = $self->__prepare_and_execute(@_);
     return $ret;
 }
 
