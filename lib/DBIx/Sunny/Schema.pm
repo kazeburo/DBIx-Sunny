@@ -6,6 +6,7 @@ use Carp qw/croak/;
 use parent qw/Class::Data::Inheritable/;
 use Class::Accessor::Lite;
 use Data::Validator;
+use DBIx::Sunny::Util qw/bind_and_execute/;
 use DBIx::TransactionManager;
 use DBI qw/:sql_types/;
 use Scalar::Util qw/blessed/;
@@ -256,16 +257,7 @@ sub __setup_accessor {
     my $bind_and_execute = sub {
         my ($dbh, $query, @binds) = @_;
         my $sth = $dbh->prepare_cached($query);
-        my $i = 0;
-        for my $bind (@binds) {
-            if ( blessed($bind) && $bind->can('value_ref') && $bind->can('type') ) {
-                # If $bind is an SQL::Maker::SQLType or compatible object, use its type info.
-                $sth->bind_param(++$i, ${ $bind->value_ref }, $bind->type);
-            } else {
-                $sth->bind_param(++$i, $bind);
-            }
-        }
-        my $ret = $sth->execute;
+        my $ret = bind_and_execute($sth, @binds);
         return ( $sth, $ret );
     };
 

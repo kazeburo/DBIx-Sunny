@@ -33,8 +33,9 @@ sub connect {
 package DBIx::Sunny::db;
 our @ISA = qw(DBI::db);
 
+use DBIx::Sunny::Util qw/bind_and_execute/;
 use DBIx::TransactionManager;
-use Scalar::Util qw/weaken blessed/;
+use Scalar::Util qw/weaken/;
 use SQL::NamedPlaceholder 0.10;
 
 sub connected {
@@ -136,17 +137,8 @@ sub __prepare_and_execute {
     my $self = shift;
     my ($query, @bind) = @_;
     my $sth = $self->prepare($query);
-    my $i = 0;
-    for my $bind ( @bind ) {
-        if ( blessed($bind) && $bind->can('value_ref') && $bind->can('type') ) {
-            # If $bind is an SQL::Maker::SQLType or compatible object, use its type info.
-            $sth->bind_param(++$i, ${ $bind->value_ref }, $bind->type);
-        } else {
-            $sth->bind_param(++$i, $bind);
-        }
-    }
-    my $ret = $sth->execute;
-    return ( $sth, $ret );
+    my $ret = bind_and_execute($sth, @bind);
+    return ($sth, $ret);
 }
 
 sub select_one {
