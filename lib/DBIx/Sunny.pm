@@ -255,9 +255,9 @@ DBIx::Sunny supports only SQLite and MySQL.
 
 DBIx::Sunny sets AutoInactiveDestroy as true.
 
-=item [SQLite/MySQL] Auto encode/decode utf-8
+=item [SQLite/MySQL/Pg] Auto encode/decode utf-8
 
-DBIx::Sunny sets sqlite_unicode and mysql_enable_utf8 automatically.
+DBIx::Sunny sets sqlite_unicode, mysql_enable_utf8 and pg_enable_utf8 automatically.
 
 =item [SQLite] Performance tuning
 
