@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/kazeburo/DBIx-Sunny.svg?branch=master)](https://travis-ci.org/kazeburo/DBIx-Sunny) [![MetaCPAN Release](https://badge.fury.io/pl/DBIx-Sunny.svg)](https://metacpan.org/release/DBIx-Sunny)
 # NAME
 
 DBIx::Sunny - Simple DBI wrapper

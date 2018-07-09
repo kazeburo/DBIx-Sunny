@@ -7,8 +7,8 @@ perl:
   - "5.18"
   - "5.16"
   - "5.14"
-  - "5.12"
-  - "5.10"
+# https://www.digitalocean.com/community/tutorials/how-to-install-mysql-on-ubuntu-14-04
+before_install: sudo cp /etc/mysql/my.cnf /usr/share/mysql/my-default.cnf
 install: cpanm --quiet --installdeps --with-develop --notest .
 notifications:
   email:
