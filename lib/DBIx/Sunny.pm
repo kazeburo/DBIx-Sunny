@@ -6,6 +6,7 @@ use 5.008005;
 use DBI 1.615;
 
 our $VERSION = '0.24';
+our $SKIP_CALLER_REGEX = qr/^(:?DBIx?|DBD|Try::Tiny|Context::Preserve)\b/;
 
 use parent qw/DBI/;
 
@@ -84,8 +85,8 @@ sub __set_comment {
     while ( my @caller = caller($i) ) {
         my $file = $caller[1];
         $file =~ s!\*/!*\//!g;
-        $trace = "/* $file line $caller[2] */"; 
-        last if $caller[0] ne ref($self) && $caller[0] !~ /^(:?DBIx?|DBD|Try::Tiny|Context::Preserve)\b/;
+        $trace = "/* $file line $caller[2] */";
+        last if $caller[0] ne ref($self) && $caller[0] !~ $SKIP_CALLER_REGEX;
         $i++;
     }
     $query =~ s! ! $trace !;
