@@ -8,6 +8,9 @@ use Class::Accessor::Lite;
 use Data::Validator;
 use DBIx::TransactionManager;
 use DBI qw/:sql_types/;
+use Scalar::Util qw/blessed/;
+use SQL::Maker::SQLType qw/sql_type/;
+use SQL::NamedPlaceholder;
 
 $Carp::Internal{"DBIx::Sunny::Schema"} = 1;
 
@@ -29,6 +32,10 @@ sub fill_arrayref {
     my $self = shift;
     my ($query, @bind) = @_;
     return if ! defined $query;
+    if (@bind == 1 && ref $bind[0] eq 'HASH') {
+        ($query, my $bind_param) = SQL::NamedPlaceholder::bind_named($query, $bind[0]);
+        return $query, @$bind_param;
+    }
     my @bind_param;
     my $modified_query = $query;
     my $i=1;
@@ -214,7 +221,7 @@ sub __setup_accessor {
     my $class = shift;
     my $cb = shift;
     my $method = shift;
-    my $query = pop;
+    my $query_tmpl = pop;
 
     my @rules;
     my %deflater;
@@ -228,61 +235,100 @@ sub __setup_accessor {
         }
         push @bind_keys, $name;
         push @rules, $name, $rule;
-    } 
+    }
+    my $is_named_placeholder_query = 1;
+    for my $key (@bind_keys) {
+        my $metakey = quotemeta $key;
+        if ($query_tmpl !~ /:$metakey/) {
+            $is_named_placeholder_query = undef;
+            last;
+        }
+    }
+    if (!$is_named_placeholder_query) {
+        my $placeholder_num = 0;
+        $placeholder_num++ while $query_tmpl =~ m/\?/g;
+        my $bind_num = scalar @bind_keys;
+        if ($placeholder_num != $bind_num) {
+            croak "The number of placeholders($placeholder_num) and the number of arguments($bind_num) do not match in the query: $query_tmpl";
+        }
+    }
+
+    my $bind_and_execute = sub {
+        my ($dbh, $query, @binds) = @_;
+        my $sth = $dbh->prepare_cached($query);
+        my $i = 0;
+        for my $bind (@binds) {
+            if ( blessed($bind) && $bind->can('value_ref') && $bind->can('type') ) {
+                # If $bind is an SQL::Maker::SQLType or compatible object, use its type info.
+                $sth->bind_param(++$i, ${ $bind->value_ref }, $bind->type);
+            } else {
+                $sth->bind_param(++$i, $bind);
+            }
+        }
+        my $ret = $sth->execute;
+        return ( $sth, $ret );
+    };
+
     my $validator = Data::Validator->new(@rules);
 
     my $do_query = sub {
         my $self = shift;
         local $Carp::Internal{'Data::Validator'} = 1;
-        my $args = $validator->validate(@_);
-        my $modified_query = $query;
-
-        my $i = 1;
-        my @bind_params;
-        for my $key ( @bind_keys ) {
-            my $type = $validator->find_rule($key)->{type};
-            if ( $type->is_a_type_of('ArrayRef') ) {
-                my $type_parameter_bind_type = $self->type2bind($type->type_parameter);
-                my @val = @{$args->{$key}};
-                my $array_query = substr('?,' x scalar(@val), 0, -1);
-                my $search_i=0;
-                my $replace_query = sub {
-                    $search_i++;
-                    if ( $search_i == $i ) {
-                        return $array_query;
+        my $args = do {
+            my $raw_args = $validator->validate(@_);
+            my $args = {};
+            for my $key ( @bind_keys ) {
+                my $type = $validator->find_rule($key)->{type};
+                if ( $type->is_a_type_of('ArrayRef') ) {
+                    my $vals = [];
+                    my $type_parameter_bind_type = $self->type2bind($type->type_parameter);
+                    my @val = @{$raw_args->{$key}};
+                    for my $val ( @val ) {
+                        if ( $deflater{$key} ) {
+                            $val = $deflater{$key}->($val);
+                            $type_parameter_bind_type = undef;
+                        }
+                        push @$vals, $type_parameter_bind_type
+                            ? sql_type(\$val, $type_parameter_bind_type)
+                            : $val;
                     }
-                    return '?';
-                };
-                $modified_query =~ s/\?/$replace_query->()/ge;
-                for my $val ( @val ) {
+                    $args->{$key} = $vals;
+                }
+                else {
+                    my $bind_type = $self->type2bind($type);
+                    my $val = $raw_args->{$key};
                     if ( $deflater{$key} ) {
                         $val = $deflater{$key}->($val);
-                        $type_parameter_bind_type = undef;
+                        $bind_type = undef;
                     }
-                    push @bind_params, $type_parameter_bind_type
-                        ? [$i, $val, $type_parameter_bind_type]
-                        : [$i, $val];
-                    $i++;
+                    $args->{$key} = $bind_type
+                        ? sql_type(\$val, $bind_type)
+                        : $val;
                 }
             }
-            else {
-                my $bind_type = $self->type2bind($type);
-                my $val = $args->{$key};
-                if ( $deflater{$key} ) {
-                    $val = $deflater{$key}->($val);
-                    $bind_type = undef;
-                }
-                push @bind_params, $bind_type
-                     ? [$i, $val, $bind_type]
-                     : [$i, $val];
-                $i++;
-            }
+            $args;
+        };
+
+        my $query = $query_tmpl;
+        if ($is_named_placeholder_query) {
+            ($query, my $bind_param) = SQL::NamedPlaceholder::bind_named($query, $args);
+            return $bind_and_execute->($self->dbh, $query, @$bind_param)
         }
 
-        my $sth = $self->dbh->prepare_cached($modified_query);
-        $sth->bind_param(@{$_}) for @bind_params;
-        my $ret = $sth->execute;
-        return ($sth,$ret);
+        my @keys = @bind_keys;
+        my @bind_param;
+        $query =~ s{\?}{
+            my $bind = $args->{ shift @keys };
+            if (ref($bind) && ref($bind) eq 'ARRAY') {
+                push @bind_param, @$bind;
+                join ',', ('?') x @$bind;
+            } else {
+                push @bind_param, $bind;
+                '?';
+            }
+        }ge;
+
+        return $bind_and_execute->($self->dbh, $query, @bind_param)
     };
 
     {
