@@ -2,6 +2,12 @@ Revision history for Perl extension DBIx::Sunny
 
 {{$NEXT}}
 
+0.25 2018-07-09T13:55:27Z
+
+        - Configurable to skip caller packages. #11
+        - automatically use `pg_enable_utf8` on Pg #12
+        - support named placeholder #13
+
 0.24 2017-09-28T01:19:10Z
 
        - The comment insertion mechanism to work correctly when used with DBIx::Class #10

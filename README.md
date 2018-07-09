@@ -29,9 +29,9 @@ DBIx::Sunny supports only SQLite and MySQL.
 
     DBIx::Sunny sets AutoInactiveDestroy as true.
 
-- \[SQLite/MySQL\] Auto encode/decode utf-8
+- \[SQLite/MySQL/Pg\] Auto encode/decode utf-8
 
-    DBIx::Sunny sets sqlite\_unicode and mysql\_enable\_utf8 automatically.
+    DBIx::Sunny sets sqlite\_unicode, mysql\_enable\_utf8 and pg\_enable\_utf8 automatically.
 
 - \[SQLite\] Performance tuning
 
@@ -61,8 +61,19 @@ DBIx::Sunny supports only SQLite and MySQL.
     select\_(one|row|all) and  query methods support auto-expanding arrayref bind parameters.
 
         $dbh->select_all('SELECT * FROM id IN (?)', [1 2 3])
-        #SQL: 'SELECT * FROM id IN (?,?,")'
+        #SQL: 'SELECT * FROM id IN (?,?,?)'
         #@BIND: (1, 2, 3)
+
+- Named placeholder
+
+    select\_(one|row|all) and query methods support named placeholder.
+
+        $dbh->select_all('SELECT * FROM users WHERE id IN (:ids) AND status = :status', {
+            ids    => [1,2,3],
+            status => 'active',
+        });
+        #SQL: 'SELECT * FROM users WHERE id IN (?,?,?) AND status = ?'
+        #@BIND: (1, 2, 3, 'active')
 
 - Typed bind parameters
 
