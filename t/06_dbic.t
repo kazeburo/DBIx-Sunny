@@ -2,7 +2,7 @@ use strict;
 use warnings;
 use utf8;
 use Test::More;
-use Test::Requires { 'DBD::SQLite' => 1.27, 'DBIx::Class' => 0.082840, 'DBIx::Tracer' => 0.03 };
+use Test::Requires { 'DBD::SQLite' => 1.31, 'DBIx::Class' => 0.082840, 'DBIx::Tracer' => 0.03 };
 use File::Temp qw/tempdir/;
 use DBIx::Sunny;
 use Data::Dumper;

@@ -3,7 +3,7 @@ use warnings;
 use utf8;
 use Test::More;
 use DBIx::Sunny;
-use Test::Requires { 'DBD::SQLite' => 1.27 };
+use Test::Requires { 'DBD::SQLite' => 1.31 };
 
 my $dbh = DBIx::Sunny->connect('dbi:SQLite::memory:', '', '');
 $dbh->do(q{CREATE TABLE foo (

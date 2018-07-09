@@ -34,7 +34,7 @@ package DBIx::Sunny::db;
 our @ISA = qw(DBI::db);
 
 use DBIx::Sunny::Util qw/bind_and_execute expand_placeholder/;
-use DBIx::TransactionManager;
+use DBIx::TransactionManager 0.13;
 use Scalar::Util qw/weaken/;
 
 sub connected {

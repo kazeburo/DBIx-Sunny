@@ -4,7 +4,8 @@ use Test::More;
 use DBIx::Sunny;
 use Encode;
 use DBI;
-use Test::Requires qw/Test::mysqld Test::TCP SQL::Maker::SQLType/;
+use SQL::Maker::SQLType;
+use Test::Requires qw/Test::mysqld Test::TCP/;
 
 my $port = Test::TCP::empty_port();
 

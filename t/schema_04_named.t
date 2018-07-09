@@ -3,7 +3,7 @@ use warnings;
 use Test::More;
 use Capture::Tiny qw/capture_merged/;
 use DBIx::Sunny;
-use Test::Requires { 'DBD::SQLite' => 1.27 };
+use Test::Requires { 'DBD::SQLite' => 1.31 };
 use lib 't/lib/';
 use TestSchemaNamed;
 

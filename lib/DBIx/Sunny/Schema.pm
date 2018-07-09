@@ -13,7 +13,7 @@ use SQL::Maker::SQLType qw/sql_type/;
 
 $Carp::Internal{"DBIx::Sunny::Schema"} = 1;
 
-use Class::Accessor::Lite (
+use Class::Accessor::Lite 0.05 (
     new => 1,
     ro  => [qw/dbh readonly/],
 );
