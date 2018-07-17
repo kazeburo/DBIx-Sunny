@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 use Test::More;
-use Test::Requires { 'DBD::SQLite' => 1.27 };
+use Test::Requires { 'DBD::SQLite' => 1.31 };
 use DBIx::Sunny;
 use lib 't/lib/';
 use TestSchema;

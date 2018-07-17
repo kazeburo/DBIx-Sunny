@@ -3,7 +3,8 @@ use warnings;
 use Test::More;
 use DBIx::Sunny;
 use DBI;
-use Test::Requires qw/DBD::SQLite SQL::Maker::SQLType/;
+use SQL::Maker::SQLType;
+use Test::Requires qw/DBD::SQLite/;
 
 sub sql_int {
     return SQL::Maker::SQLType::sql_type(\$_[0], DBI::SQL_INTEGER);

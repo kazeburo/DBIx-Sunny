@@ -4,68 +4,32 @@ use strict;
 use warnings;
 use Carp qw/croak/;
 use parent qw/Class::Data::Inheritable/;
-use Class::Accessor::Lite;
 use Data::Validator;
+use DBIx::Sunny::Util qw/bind_and_execute expand_placeholder/;
 use DBIx::TransactionManager;
 use DBI qw/:sql_types/;
 use Scalar::Util qw/blessed/;
 use SQL::Maker::SQLType qw/sql_type/;
-use SQL::NamedPlaceholder;
 
 $Carp::Internal{"DBIx::Sunny::Schema"} = 1;
 
-Class::Accessor::Lite->mk_ro_accessors(qw/dbh readonly/);
+use Class::Accessor::Lite 0.05 (
+    new => 1,
+    ro  => [qw/dbh readonly/],
+);
 
 __PACKAGE__->mk_classdata( '__validators' );
 __PACKAGE__->mk_classdata( '__deflaters' );
 
-sub new {
-    my $class = shift;
-    my %args = @_;
-    bless {
-        readonly => delete $args{readonly},
-        dbh => delete $args{dbh},
-    }, $class;
-};
-
 sub fill_arrayref {
     my $self = shift;
-    my ($query, @bind) = @_;
-    return if ! defined $query;
-    if (@bind == 1 && ref $bind[0] eq 'HASH') {
-        ($query, my $bind_param) = SQL::NamedPlaceholder::bind_named($query, $bind[0]);
-        return $query, @$bind_param;
-    }
-    my @bind_param;
-    my $modified_query = $query;
-    my $i=1;
-    for my $bind ( @bind ) {
-        if ( ref($bind) && ref($bind) eq 'ARRAY' ) {
-            my $array_query = substr('?,' x scalar(@{$bind}), 0, -1);
-            my $search_i=0;
-            my $replace_query = sub {
-                $search_i++;
-                if ( $search_i == $i ) {
-                    return $array_query;
-                }
-                return '?';
-            };
-            $modified_query =~ s/\?/$replace_query->()/ge;
-            push @bind_param, @{$bind};
-        }
-        else {
-            push @bind_param, $bind;
-        }
-        $i++;
-    }
-    return ($modified_query, @bind_param);
+    return expand_placeholder(@_);
 }
-
 
 sub select_one {
     my $class = shift;
     if ( ref $class ) {
-        my ($query, @bind) = $class->fill_arrayref(@_);
+        my ($query, @bind) = expand_placeholder(@_);
         my $row = $class->dbh->selectrow_arrayref($query, {}, @bind);
         return unless $row;
         return $row->[0];
@@ -88,7 +52,7 @@ sub select_one {
 sub select_row {
     my $class = shift;
     if ( ref $class ) {
-        my ($query, @bind) = $class->fill_arrayref(@_);
+        my ($query, @bind) = expand_placeholder(@_);
         my $row = $class->dbh->selectrow_hashref($query, {}, @bind);
         return unless $row;
         return $row;
@@ -116,7 +80,7 @@ sub select_row {
 sub select_all {
     my $class = shift;
     if ( ref $class ) {
-        my ($query, @bind) = $class->fill_arrayref(@_);
+        my ($query, @bind) = expand_placeholder(@_);
         my $rows = $class->dbh->selectall_arrayref($query, { Slice => {} }, @bind);
         return $rows;
     }
@@ -145,7 +109,7 @@ sub select_all {
 sub query {
     my $class = shift;
     if ( ref $class ) {
-        my ($query, @bind) = $class->fill_arrayref(@_);
+        my ($query, @bind) = expand_placeholder(@_);
         croak "couldnot use query for readonly database handler" if $class->readonly;
         my $sth = $class->prepare($query);
         return $sth->execute(@bind);
@@ -191,7 +155,7 @@ sub args {
                 $deflater{$name} = $deflater;
             }
             push @rules, $name, $rule;
-        } 
+        }
         $deflaters->{$method} = \%deflater;
         $validators->{$method} = Data::Validator->new(@rules);
     }
@@ -204,7 +168,7 @@ sub args {
         @caller_args = @DB::args;
     }
     local $Carp::CarpLevel = 3;
-    local $Carp::Internal{'Data::Validator'} = 1;   
+    local $Carp::Internal{'Data::Validator'} = 1;
     my $result = $validators->{$method}->validate(@caller_args);
 
     if ( my @deflaters = keys %{$deflaters->{$method}} ) {
@@ -253,22 +217,6 @@ sub __setup_accessor {
         }
     }
 
-    my $bind_and_execute = sub {
-        my ($dbh, $query, @binds) = @_;
-        my $sth = $dbh->prepare_cached($query);
-        my $i = 0;
-        for my $bind (@binds) {
-            if ( blessed($bind) && $bind->can('value_ref') && $bind->can('type') ) {
-                # If $bind is an SQL::Maker::SQLType or compatible object, use its type info.
-                $sth->bind_param(++$i, ${ $bind->value_ref }, $bind->type);
-            } else {
-                $sth->bind_param(++$i, $bind);
-            }
-        }
-        my $ret = $sth->execute;
-        return ( $sth, $ret );
-    };
-
     my $validator = Data::Validator->new(@rules);
 
     my $do_query = sub {
@@ -310,25 +258,18 @@ sub __setup_accessor {
         };
 
         my $query = $query_tmpl;
+        my @bind_param;
         if ($is_named_placeholder_query) {
             ($query, my $bind_param) = SQL::NamedPlaceholder::bind_named($query, $args);
-            return $bind_and_execute->($self->dbh, $query, @$bind_param)
+            @bind_param = @$bind_param;
         }
-
-        my @keys = @bind_keys;
-        my @bind_param;
-        $query =~ s{\?}{
-            my $bind = $args->{ shift @keys };
-            if (ref($bind) && ref($bind) eq 'ARRAY') {
-                push @bind_param, @$bind;
-                join ',', ('?') x @$bind;
-            } else {
-                push @bind_param, $bind;
-                '?';
-            }
-        }ge;
-
-        return $bind_and_execute->($self->dbh, $query, @bind_param)
+        else {
+            my @bind = map { $args->{$_} } @bind_keys;
+            ($query, @bind_param) = expand_placeholder($query, @bind);
+        }
+        my $sth = $self->dbh->prepare_cached($query);
+        my $ret = bind_and_execute($sth, @bind_param);
+        return ( $sth, $ret );
     };
 
     {

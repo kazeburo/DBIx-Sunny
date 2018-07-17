@@ -4,7 +4,8 @@ use Test::More;
 use DBIx::Sunny;
 use Encode;
 use DBI;
-use Test::Requires qw/Test::PostgreSQL Test::TCP SQL::Maker::SQLType/;
+use SQL::Maker::SQLType;
+use Test::Requires qw/Test::PostgreSQL Test::TCP/;
 
 my $pg = Test::PostgreSQL->new
     or plan skip_all => $Test::PostgreSQL::errstr;

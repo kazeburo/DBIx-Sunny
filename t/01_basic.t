@@ -1,9 +1,9 @@
 use strict;
 use warnings;
-use Test::More;
+use Test::More 0.98;
 use DBIx::Sunny;
 use Encode;
-use Test::Requires { 'DBD::SQLite' => 1.27 };
+use Test::Requires { 'DBD::SQLite' => 1.31 };
 
 eval {
     DBIx::Sunny->connect('dbi:unknown:', '', '');

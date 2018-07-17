@@ -3,7 +3,7 @@ use warnings;
 use Test::More;
 use Time::localtime;
 use DBIx::Sunny;
-use Test::Requires { 'DBD::SQLite' => 1.27 };
+use Test::Requires { 'DBD::SQLite' => 1.31 };
 use lib 't/lib/';
 use TestSchema;
 

@@ -1,0 +1,4 @@
+name="DBIx-Sunny"
+authority = "cpan:KAZEBURO"
+module_maker = "ModuleBuildTiny"
+badges = ['travis', 'metacpan']
