@@ -432,21 +432,21 @@ DBIx::Sunny::Schema - SQL Class Builder
 
 =over 4
 
-=item __PACKAGE__->select_one( $method_name, @validators, $sql );
+=item C<< __PACKAGE__->select_one( $method_name, @validators, $sql ); >>
 
-build a select_one method named $method_name with validator. validators arguments are passed for Data::Validator. you can use Mouse's type constraint. Type constraint are also used for SQL's bind type determination. 
+build a select_one method named $method_name with validator. validators arguments are passed for Data::Validator. you can use Mouse's type constraint. Type constraint are also used for SQL's bind type determination.
 
-=item __PACKAGE__->select_row( $method_name, @validators, $sql, [\&filter] );
+=item C<< __PACKAGE__->select_row( $method_name, @validators, $sql, [\&filter] ); >>
 
-build a select_row method named $method_name with validator. If a last argument is CodeRef, this coderef will be applied for a result row.
+build a select_row method named $method_name with validator. If a last argument is CodeRef, this CodeRef will be applied for a result row.
 
-=item __PACKAGE__->select_all( $method_name, @validators, $sql, [\&filter] );
+=item C<< __PACKAGE__->select_all( $method_name, @validators, $sql, [\&filter] ); >>
 
-build a select_all method named $method_name with validator. If a last argument is CodeRef, this coderef will be applied for all result row.
+build a select_all method named $method_name with validator. If a last argument is CodeRef, this CodeRef will be applied for all result row.
 
-=item __PACKAGE__->query( $method_name, @validators, $sql );
+=item C<< __PACKAGE__->query( $method_name, @validators, $sql ); >>
 
-build a query method named $method_name with validator.  
+build a query method named $method_name with validator.
 
 =back
 
@@ -481,7 +481,7 @@ If you want to deflate argument before execute SQL, you can it with adding defla
       body => 'Str',
       created_on => { isa => 'DateTime', deflater => sub { shift->strftime('%Y-%m-%d %H:%M:%S')  },
       <<SQL);
-  INSERT INTO articles (subject, body, created_on) 
+  INSERT INTO articles (subject, body, created_on)
   VALUES ( ?, ?, ?)',
   SQL
 
@@ -491,51 +491,51 @@ If you want to deflate argument before execute SQL, you can it with adding defla
 
 =over 4
 
-=item new({ dbh => DBI, readonly => ENUM(0,1) ) :DBIx::Sunny::Schema
+=item C<< new({ dbh => DBI, readonly => ENUM(0,1) ) >> :DBIx::Sunny::Schema
 
-create instance of schema. if readonly is true, query method's will raise exception.
+create instance of schema. if C<readonly> is true, query method's will raise exception.
 
-=item dbh :DBI
+=item C<dbh> :DBI
 
-readonly accessor for DBI database handler. 
+C<readonly> accessor for DBI database handler.
 
-=item select_one($query, @bind) :Str
+=item C<select_one($query, @bind)> :Str
 
 Shortcut for prepare, execute and fetchrow_arrayref->[0]
 
-=item select_row($query, @bind) :HashRef
+=item C<select_row($query, @bind)> :HashRef
 
 Shortcut for prepare, execute and fetchrow_hashref
 
-=item select_all($query, @bind) :ArrayRef[HashRef]
+=item C<select_all($query, @bind)> :ArrayRef[HashRef]
 
 Shortcut for prepare, execute and selectall_arrayref(.., { Slice => {} }, ..)
 
-=item query($query, @bind) :Str
+=item C<query($query, @bind)> :Str
 
 Shortcut for prepare, execute. 
 
-=item txn_scope() :DBIx::TransactionManager::Guard
+=item C<txn_scope()> :DBIx::TransactionManager::Guard
 
 return DBIx::TransactionManager::Guard object
 
-=item do(@args) :Str
+=item C<do(@args)> :Str
 
-Shortcut for $self->dbh->do()
+Shortcut for C<< $self->dbh->do() >>
 
-=item prepare(@args) :DBI::st
+=item C<prepare(@args)> :DBI::st
 
-Shortcut for $self->dbh->prepare()
+Shortcut for C<< $self->dbh->prepare() >>
 
-=item func(@args) :Str
+=item C<func(@args)> :Str
 
-Shortcut for $self->dbh->func()
+Shortcut for C<< $self->dbh->func() >>
 
-=item last_insert_id(@args) :Str
+=item C<last_insert_id(@args)> :Str
 
-Shortcut for $self->dbh->last_insert_id()
+Shortcut for C<< $self->dbh->last_insert_id() >>
 
-=item args(@rule) :HashRef
+=item C<args(@rule)> :HashRef
 
 Shortcut for using Data::Validator. Optional deflater arguments can be used.
 Data::Validator instance will cache at first time.
@@ -552,7 +552,7 @@ Data::Validator instance will cache at first time.
       $arg->{id} ...
   }
 
-$args is validated arguments. @_ is not needed.
+C<$args> is validated arguments. C<@_> is not needed.
 
 =back
 

@@ -5,7 +5,7 @@ use warnings;
 use 5.008005;
 use DBI 1.615;
 
-our $VERSION = '0.25';
+our $VERSION = '0.9990';
 our $SKIP_CALLER_REGEX = qr/^(:?DBIx?|DBD|Try::Tiny|Context::Preserve)\b/;
 
 use parent qw/DBI/;
@@ -201,7 +201,7 @@ DBIx::Sunny supports only SQLite and MySQL.
 
 DBIx::Sunny sets AutoInactiveDestroy as true.
 
-=item [SQLite/MySQL/Pg] Auto encode/decode utf-8
+=item [SQLite/MySQL/Pg] Auto encode/decode UTF-8
 
 DBIx::Sunny sets sqlite_unicode, mysql_enable_utf8 and pg_enable_utf8 automatically.
 
@@ -265,19 +265,19 @@ DBIx::Sunny allows you to specify data types of bind parameters. If a bind param
 
 =over 4
 
-=item $col = $dbh->select_one($query, @bind);
+=item C<< $col = $dbh->select_one($query, @bind); >>
 
 Shortcut for prepare, execute and fetchrow_arrayref->[0]
 
-=item $row = $dbh->select_row($query, @bind);
+=item C<< $row = $dbh->select_row($query, @bind); >>
 
 Shortcut for prepare, execute and fetchrow_hashref
 
-=item $rows = $dbh->select_all($query, @bind);
+=item C<< $rows = $dbh->select_all($query, @bind); >>
 
-Shortcut for prepare, execute and selectall_arrayref(.., { Slice => {} }, ..)
+Shortcut for prepare, execute and C<< selectall_arrayref(.., { Slice => {} }, ..) >>
 
-=item $dbh->query($query, @bind);
+=item C<< $dbh->query($query, @bind); >>
 
 Shortcut for prepare, execute. 
 
