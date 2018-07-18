@@ -80,7 +80,7 @@
          "web" : "https://github.com/kazeburo/DBIx-Sunny"
       }
    },
-   "version" : "0.25",
+   "version" : "0.9990",
    "x_authority" : "cpan:KAZEBURO",
    "x_contributors" : [
       "FUJIWARA Shunichiro <fujiwara.shunichiro@gmail.com>",

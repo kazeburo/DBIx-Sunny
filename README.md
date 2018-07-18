@@ -30,7 +30,7 @@ DBIx::Sunny supports only SQLite and MySQL.
 
     DBIx::Sunny sets AutoInactiveDestroy as true.
 
-- \[SQLite/MySQL/Pg\] Auto encode/decode utf-8
+- \[SQLite/MySQL/Pg\] Auto encode/decode UTF-8
 
     DBIx::Sunny sets sqlite\_unicode, mysql\_enable\_utf8 and pg\_enable\_utf8 automatically.
 
@@ -90,19 +90,19 @@ DBIx::Sunny supports only SQLite and MySQL.
 
 # ADDITIONAL METHODS
 
-- $col = $dbh->select\_one($query, @bind);
+- `$col = $dbh->select_one($query, @bind);`
 
     Shortcut for prepare, execute and fetchrow\_arrayref->\[0\]
 
-- $row = $dbh->select\_row($query, @bind);
+- `$row = $dbh->select_row($query, @bind);`
 
     Shortcut for prepare, execute and fetchrow\_hashref
 
-- $rows = $dbh->select\_all($query, @bind);
+- `$rows = $dbh->select_all($query, @bind);`
 
-    Shortcut for prepare, execute and selectall\_arrayref(.., { Slice => {} }, ..)
+    Shortcut for prepare, execute and `selectall_arrayref(.., { Slice => {} }, ..)`
 
-- $dbh->query($query, @bind);
+- `$dbh->query($query, @bind);`
 
     Shortcut for prepare, execute. 
 

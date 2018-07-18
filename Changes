@@ -2,6 +2,10 @@ Revision history for Perl extension DBIx::Sunny
 
 {{$NEXT}}
 
+0.9990 2018-07-18T06:02:16Z
+
+        - minor fixes #14
+
 0.25 2018-07-09T13:55:27Z
 
         - Configurable to skip caller packages. #11
