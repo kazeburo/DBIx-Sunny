@@ -6,6 +6,7 @@ use warnings;
 use Exporter 'import';
 use Scalar::Util qw/blessed/;
 use SQL::NamedPlaceholder 0.10;
+use Carp qw/croak/;
 
 our @EXPORT_OK = qw/bind_and_execute expand_placeholder/;
 
@@ -33,8 +34,11 @@ sub expand_placeholder {
     }
 
     my @bind_param;
+    my $orig_num_binds = @bind;
+    my $num_bounds = 0;
     $query =~ s{\?}{
         my $bind = shift @bind;
+        $num_bounds++;
         if (ref($bind) && ref($bind) eq 'ARRAY') {
             push @bind_param, @$bind;
             join ',', ('?') x @$bind;
@@ -43,6 +47,11 @@ sub expand_placeholder {
             '?';
         }
     }ge;
+
+    if ($num_bounds != $orig_num_binds) {
+        croak "Num of binds doesn't match. expected = $num_bounds, but passed $orig_num_binds";
+    }
+
     return ( $query, @bind_param );
 }
 

@@ -17,6 +17,7 @@ on test => sub {
     requires 'Capture::Tiny';
     requires 'Test::More', '0.98';
     requires 'Test::Requires';
+    requires 'Test::Exception';
 };
 
 on develop => sub {
