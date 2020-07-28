@@ -1,37 +1,37 @@
 use strict;
 use warnings;
 use Test::More;
-use Test::Warn;
+use Test::Exception;
 use DBIx::Sunny::Util qw/expand_placeholder/;
 
-my $exp_warn = qr/Num of binds doesn't match/;
+my $exp_throw = qr/Num of binds doesn't match/;
 
 subtest 'no placeholder' => sub {
     my $sql = q{SELECT * FROM foo};
 
-    warning_is { expand_placeholder($sql) } undef, 'exact';
-    warning_like { expand_placeholder($sql, 1) } $exp_warn, 'too many';
-    warning_like { expand_placeholder($sql, undef) } $exp_warn, 'too many';
+    lives_ok { expand_placeholder($sql) } 'exact';
+    throws_ok { expand_placeholder($sql, 1) } $exp_throw, 'too many';
+    throws_ok { expand_placeholder($sql, undef) } $exp_throw, 'too many';
 };
 
 subtest 'scalar' => sub {
     my $sql = q{SELECT * FROM foo WHERE id = ?};
 
-    warning_like { expand_placeholder($sql) } $exp_warn, 'too few';
-    warning_is { expand_placeholder($sql, 1) } undef, 'exact';
-    warning_is { expand_placeholder($sql, undef) } undef, 'exact';
-    warning_like { expand_placeholder($sql, 1, 2) } $exp_warn, 'too many';
-    warning_like { expand_placeholder($sql, 1, undef) } $exp_warn, 'too many';
+    throws_ok { expand_placeholder($sql) } $exp_throw, 'too few';
+    lives_ok { expand_placeholder($sql, 1) } 'exact';
+    lives_ok { expand_placeholder($sql, undef) } 'exact';
+    throws_ok { expand_placeholder($sql, 1, 2) } $exp_throw, 'too many';
+    throws_ok { expand_placeholder($sql, 1, undef) } $exp_throw, 'too many';
 };
 
 subtest 'has array' => sub {
     my $sql = q{SELECT * FROM foo WHERE id IN (?)};
 
-    warning_like { expand_placeholder($sql) } $exp_warn, 'too few';
-    warning_is { expand_placeholder($sql, [1, 2]) } undef, 'exact';
-    warning_is { expand_placeholder($sql, [undef]) } undef, 'exact';
-    warning_like { expand_placeholder($sql, [1, 2], 3) } $exp_warn, 'too many';
-    warning_like { expand_placeholder($sql, [1, 2], undef) } $exp_warn, 'too many';
+    throws_ok { expand_placeholder($sql) } $exp_throw, 'too few';
+    lives_ok { expand_placeholder($sql, [1, 2]) } 'exact';
+    lives_ok { expand_placeholder($sql, [undef]) } 'exact';
+    throws_ok { expand_placeholder($sql, [1, 2], 3) } $exp_throw, 'too many';
+    throws_ok { expand_placeholder($sql, [1, 2], undef) } $exp_throw, 'too many';
 };
 
 done_testing;

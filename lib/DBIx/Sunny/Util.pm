@@ -6,6 +6,7 @@ use warnings;
 use Exporter 'import';
 use Scalar::Util qw/blessed/;
 use SQL::NamedPlaceholder 0.10;
+use Carp qw/croak/;
 
 our @EXPORT_OK = qw/bind_and_execute expand_placeholder/;
 
@@ -48,7 +49,7 @@ sub expand_placeholder {
     }ge;
 
     if ($num_bounds != $orig_num_binds) {
-        warn "Num of binds doesn't match. expected = $num_bounds, but passed $orig_num_binds";
+        croak "Num of binds doesn't match. expected = $num_bounds, but passed $orig_num_binds";
     }
 
     return ( $query, @bind_param );
