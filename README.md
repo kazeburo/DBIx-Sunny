@@ -43,7 +43,7 @@ DBIx::Sunny supports only SQLite and MySQL.
 
 - Nested transaction management.
 
-    DBIx::Sunny supports nested transaction management based on RAII like DBIx::Class or DBIx::Skinny. It uses [DBIx::TransactionManager](https://metacpan.org/pod/DBIx::TransactionManager) internally.
+    DBIx::Sunny supports nested transaction management based on RAII like DBIx::Class or DBIx::Skinny. It uses [DBIx::TransactionManager](https://metacpan.org/pod/DBIx%3A%3ATransactionManager) internally.
 
 - Error Handling
 
@@ -78,7 +78,7 @@ DBIx::Sunny supports only SQLite and MySQL.
 
 - Typed bind parameters
 
-    DBIx::Sunny allows you to specify data types of bind parameters. If a bind parameter is [SQL::Maker::SQLType](https://metacpan.org/pod/SQL::Maker::SQLType) object, its value is passed as its type, otherwise it is passed as default type (VARCHAR).
+    DBIx::Sunny allows you to specify data types of bind parameters. If a bind parameter is [SQL::Maker::SQLType](https://metacpan.org/pod/SQL%3A%3AMaker%3A%3ASQLType) object, its value is passed as its type, otherwise it is passed as default type (VARCHAR).
 
         use SQL::Maker::SQLType qw/sql_type/;
         use DBI qw/:sql_types/
@@ -112,7 +112,7 @@ Masahiro Nagano &lt;kazeburo KZBRKZBR@ gmail.com>
 
 # SEE ALSO
 
-[DBI](https://metacpan.org/pod/DBI), [Amon2::DBI](https://metacpan.org/pod/Amon2::DBI)
+[DBI](https://metacpan.org/pod/DBI), [Amon2::DBI](https://metacpan.org/pod/Amon2%3A%3ADBI)
 
 # LICENSE
 

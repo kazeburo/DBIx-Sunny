@@ -2,6 +2,10 @@ Revision history for Perl extension DBIx::Sunny
 
 {{$NEXT}}
 
+0.9992 2020-07-29T23:32:14Z
+
+        - Croak when mismatch of bind values #17
+
 0.9991 2018-07-19T01:18:51Z
 
         - maintenance release
