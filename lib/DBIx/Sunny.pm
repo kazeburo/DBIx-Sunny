@@ -159,6 +159,21 @@ sub last_insert_id {
     $self->SUPER::last_insert_id(@_);
 }
 
+sub select_row_as {
+    my $self = shift;
+    my $model = shift;
+    my $row = $self->select_row(@_);
+    return unless $row;
+    $model->new(%$row);
+}
+
+sub select_all_as {
+    my $self = shift;
+    my $model = shift;
+    my $rows = $self->select_all(@_);
+    return [ map { $model->new(%$_) } @$rows ];
+}
+
 package DBIx::Sunny::st; # statement handler
 our @ISA = qw(DBI::st);
 
@@ -178,7 +193,7 @@ DBIx::Sunny - Simple DBI wrapper
 
     my $dbh = DBIx::Sunny->connect(...);
 
-    # or 
+    # or
 
     use DBI;
 
@@ -277,9 +292,17 @@ Shortcut for prepare, execute and fetchrow_hashref
 
 Shortcut for prepare, execute and C<< selectall_arrayref(.., { Slice => {} }, ..) >>
 
+=item C<< $model = $dbh->select_row_as($model_class, $query, @bind); >>
+
+Shortcut for C<< $model_class->new(%{ $dbh->select_row($query, @bind) }) >>;
+
+=item C<< $models = $dbh->select_all_as($model_class, $query, @bind); >>
+
+Shortcut for C<< [ map { $model_class->new(%$_) } @{ $dbh->select_all($query, @bind) } ]; >>
+
 =item C<< $dbh->query($query, @bind); >>
 
-Shortcut for prepare, execute. 
+Shortcut for prepare, execute.
 
 =back
 

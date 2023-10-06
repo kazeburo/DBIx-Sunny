@@ -24,6 +24,30 @@ is_deeply $dbh->select_row(q{SELECT * FROM foo ORDER BY e}), { id => 1, e => 3 }
 is join('|', map { $_->{e} } @{$dbh->select_all(q{SELECT * FROM foo ORDER BY e})}), '3|4';
 is join('|', map { $_->{e} } @{$dbh->select_all(q{SELECT * FROM foo WHERE e IN (?)},[3,4])}), '3|4';
 
+
+{
+    package Foo;
+    sub new {
+        my ($class, %args) = @_;
+        bless \%args, $class;
+    }
+}
+
+subtest 'select_row_as' => sub {
+    my $foo = $dbh->select_row_as('Foo', q{SELECT e FROM foo WHERE id=?}, 1);
+    isa_ok $foo, 'Foo';
+    is $foo->{e}, 3;
+};
+
+subtest 'select_all_as' => sub {
+    my $foos = $dbh->select_all_as('Foo', q{SELECT * FROM foo ORDER BY e});
+    isa_ok $foos->[0], 'Foo';
+    is $foos->[0]->{e}, 3;
+
+    isa_ok $foos->[1], 'Foo';
+    is $foos->[1]->{e}, 4;
+};
+
 subtest 'utf8' => sub {
     use utf8;
     ok( $dbh->query(q{CREATE TABLE bar (x varchar(10))}) );
