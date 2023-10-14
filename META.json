@@ -4,7 +4,7 @@
       "Masahiro Nagano <kazeburo KZBRKZBR@ gmail.com>"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Minilla/v3.1.10, CPAN::Meta::Converter version 2.150010",
+   "generated_by" : "Minilla/v3.1.23, CPAN::Meta::Converter version 2.150010",
    "license" : [
       "perl_5"
    ],
@@ -77,11 +77,11 @@
       "homepage" : "https://github.com/kazeburo/DBIx-Sunny",
       "repository" : {
          "type" : "git",
-         "url" : "git://github.com/kazeburo/DBIx-Sunny.git",
+         "url" : "https://github.com/kazeburo/DBIx-Sunny.git",
          "web" : "https://github.com/kazeburo/DBIx-Sunny"
       }
    },
-   "version" : "0.9992",
+   "version" : "0.9993",
    "x_authority" : "cpan:KAZEBURO",
    "x_contributors" : [
       "FUJIWARA Shunichiro <fujiwara.shunichiro@gmail.com>",
@@ -89,9 +89,10 @@
       "Songmu <y.songmu@gmail.com>",
       "Tokuhiro Matsuno <tokuhirom@gmail.com>",
       "egawata <egawa.takashi@gmail.com>",
+      "kobaken <kentafly88@gmail.com>",
       "motemen <motemen@gmail.com>",
       "nanto_vi <nanto@moon.email.ne.jp>"
    ],
-   "x_serialization_backend" : "JSON::PP version 4.04",
+   "x_serialization_backend" : "JSON::PP version 4.07",
    "x_static_install" : 1
 }

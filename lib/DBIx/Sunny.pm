@@ -5,7 +5,7 @@ use warnings;
 use 5.008005;
 use DBI 1.615;
 
-our $VERSION = '0.9992';
+our $VERSION = '0.9993';
 our $SKIP_CALLER_REGEX = qr/^(:?DBIx?|DBD|Try::Tiny|Context::Preserve)\b/;
 
 use parent qw/DBI/;

@@ -2,6 +2,11 @@ Revision history for Perl extension DBIx::Sunny
 
 {{$NEXT}}
 
+0.9993 2023-10-14T08:38:01Z
+
+        - Add select_row_as and select_all_as features #19
+
+
 0.9992 2020-07-29T23:32:14Z
 
         - Croak when mismatch of bind values #17

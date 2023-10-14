@@ -9,7 +9,7 @@ DBIx::Sunny - Simple DBI wrapper
 
     my $dbh = DBIx::Sunny->connect(...);
 
-    # or 
+    # or
 
     use DBI;
 
@@ -102,9 +102,17 @@ DBIx::Sunny supports only SQLite and MySQL.
 
     Shortcut for prepare, execute and `selectall_arrayref(.., { Slice => {} }, ..)`
 
+- `$model = $dbh->select_row_as($model_class, $query, @bind);`
+
+    Shortcut for `$model_class->new(%{ $dbh->select_row($query, @bind) })`;
+
+- `$models = $dbh->select_all_as($model_class, $query, @bind);`
+
+    Shortcut for `[ map { $model_class->new(%$_) } @{ $dbh->select_all($query, @bind) } ];`
+
 - `$dbh->query($query, @bind);`
 
-    Shortcut for prepare, execute. 
+    Shortcut for prepare, execute.
 
 # AUTHOR
 
